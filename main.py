@@ -1,9 +1,10 @@
+import random
 import os
 from pathlib import Path
 from urllib.parse import quote_plus, unquote_plus
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from fasthtml.common import *
-from rich import print
+from rich import print  # noqa
 
 
 app, rt = fast_app()
@@ -11,20 +12,27 @@ setup_toasts(app)
 
 GALLERY_DIR = Path(os.environ.get("MFLUX_GALLERY_DIR", "/Users/anthonywu/workspace/flux-output-local"))
 os.chdir(GALLERY_DIR)
-PAGE_SIZE = 10
+LOAD_LIMIT = 100
 
 def get_page_images():
     tags = []
     for count, img in enumerate(GALLERY_DIR.glob("*/*.png"), 1):
-        if count > PAGE_SIZE:
+        if count > LOAD_LIMIT:
             break
         # img_id = img.name
         src = str(img.relative_to(GALLERY_DIR))
         image_id = urlsafe_b64encode(src.encode("utf8")).decode("utf8")
+        resource_id = f"/image/{image_id}"
         tags.append(
             Div(
-                Img(src=src, height="50%", width="50%"),
-                Form(hx_delete=f"/image/{image_id}")(
+                Div(
+                    id=f"lazy-image-{count}",
+                    hx_trigger="revealed throttle:2s",
+                    hx_get=resource_id,
+                    hx_swap="innerHTML swap:innerHTML transition:true",
+                )(P(f"placeholder for image #{count}: {resource_id}")),
+                # Img(src=src, height="50%", width="50%"),
+                Form(hx_delete=resource_id)(
                     Button(f"Delete {src}", type="submit"),
                     hx_swap="innerHTML",
                     hx_target=f"#container-image-{count}"
@@ -37,9 +45,9 @@ def get_page_images():
 @rt("/image/{img_path_b64:str}")
 def get(session, img_path_b64: str):
     img_path = urlsafe_b64decode(img_path_b64.encode("utf8")).decode("utf8")
-    return FileResponse(img_path)
+    return Img(src=img_path)
 
-@rt("/image/{img_path_b64}")
+@rt("/image/{img_path_b64:str}")
 def delete(session, img_path_b64: str):
     img_path = Path(urlsafe_b64decode(img_path_b64.encode("utf8")).decode("utf8"))
     try:
@@ -49,16 +57,24 @@ def delete(session, img_path_b64: str):
     except Exception as exc:
         return Response(str(exc))
 
+def _gallery_page(title, img_elems):
+    num_images = len(img_elems)
+    return Titled(
+        title,
+        P(Span("Directory"), Code(GALLERY_DIR)),
+        P(f"{num_images} images listed"),
+        Ol(*img_elems)
+    )
 
 @rt("/")
 def get(session):
     img_elems = [Li(img_tag) for img_tag in get_page_images()]
-    num_images = len(img_elems)
-    add_toast(session, f"Image Count: {num_images}")
-    return Titled(
-        "mflux gallery",
-        P(f"{num_images} images listed"),
-        Ol(*img_elems)
-    )
+    return _gallery_page("mflux gallery", img_elems)
+
+@rt("/shuffled")
+def get(session):
+    img_elems = [Li(img_tag) for img_tag in get_page_images()]
+    random.shuffle(img_elems)
+    return _gallery_page("mflux gallery - shuffled", img_elems)
 
 serve()
