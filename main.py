@@ -1,5 +1,6 @@
 import random
 import os
+import sys
 from pathlib import Path
 from urllib.parse import quote_plus, unquote_plus
 from base64 import urlsafe_b64encode, urlsafe_b64decode
@@ -10,13 +11,22 @@ from rich import print  # noqa
 app, rt = fast_app()
 setup_toasts(app)
 
-GALLERY_DIR = Path(os.environ.get("MFLUX_GALLERY_DIR", "/Users/anthonywu/workspace/flux-output-local"))
+if len(sys.argv) > 1:
+    GALLERY_DIR = Path(sys.argv[1])
+else:
+    GALLERY_DIR = Path(os.environ["MFLUX_GALLERY_DIR"]).expanduser()
+
 os.chdir(GALLERY_DIR)
-LOAD_LIMIT = 100
+LOAD_LIMIT = 1000
 
 def get_page_images():
+    matches = sorted(
+        list(GALLERY_DIR.glob("*/*.png")),
+        key=lambda _: _.stat().st_mtime,
+        reverse=True
+    )
     tags = []
-    for count, img in enumerate(GALLERY_DIR.glob("*/*.png"), 1):
+    for count, img in enumerate(matches, 1):
         if count > LOAD_LIMIT:
             break
         # img_id = img.name
@@ -52,7 +62,7 @@ def delete(session, img_path_b64: str):
     img_path = Path(urlsafe_b64decode(img_path_b64.encode("utf8")).decode("utf8"))
     try:
         img_path.unlink()
-        add_toast(session, f"Deleted {img_path}")
+        # add_toast(session, f"Deleted {img_path}")
         return Response(f"Deleted {img_path}")
     except Exception as exc:
         return Response(str(exc))
