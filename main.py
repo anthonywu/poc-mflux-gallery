@@ -1,115 +1,87 @@
-import argparse
 import os
 import random
-import sys
-from pathlib import Path
+import typing as t
 
 from fasthtml.common import *
+from fasthtml.components import Swiper_Container, Swiper_Slide
 from rich import print  # noqa
 
+import cli
+import gallery
 
-def create_parser():
-    parser = argparse.ArgumentParser(
-        prog='genai-gallery',
-        description='Manage an AI image gallery.'
-    )
-
-    # Positional argument for the directory
-    parser.add_argument(
-        'directory',
-        type=Path,
-        help='The directory containing the images for the gallery'
-    )
-
-    # Optional argument for the host
-    parser.add_argument(
-        '--host',
-        type=str,
-        required=False,
-        default='0.0.0.0',
-        help='The port number to run the gallery server on (default: 0.0.0.0)'
-    )
-
-    # Optional argument for the port
-    parser.add_argument(
-        '--port',
-        type=int,
-        required=False,
-        default=9000,
-        help='The port number to run the gallery server on (default: 9000)'
-    )
-
-    # Optional argument for delete mode
-    parser.add_argument(
-        '--delete-mode',
-        required=False,
-        choices=['trash', 'permanent'],
-        default='permanent',
-        help='Specify the delete mode for images (default: permanent)'
-    )
-
-    parser.add_argument(
-        '--debug',
-        required=False,
-        action='store_true',
-        default=False,
-        help='Specify the debug mode - more verbose and instant reload.'
-    )
-
-    return parser
-
-parser = create_parser()
+parser = cli.create_parser()
 args = parser.parse_args()
 
 
-GALLERY_DIR = args.directory.resolve()
+app_gallery = gallery.Gallery(GALLERY_DIR := args.directory.resolve())
 os.chdir(GALLERY_DIR)
-LOAD_LIMIT = 1000
 
-PHOTO_SUFFIXES = [".jpg", ".jpeg", ".png"]
+swiper_js = Script(
+    src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
+)
+cash_js = Script(src="https://cdn.jsdelivr.net/npm/cash-dom/dist/cash.min.js")
+jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
-def iter_glob_photos(suffixes=PHOTO_SUFFIXES) -> Path:
-    count = 0
-    for suf in suffixes:
-        for _ in GALLERY_DIR.rglob(f"*{suf}", case_sensitive=False):
-            if count <= LOAD_LIMIT:
-                yield _
-            count += 1
+custom_handlers = Script(
+    """
+    // Add a global keydown listener
+    const deleteAndMoveOn = () => {
+        $(".swiper-slide-active button.delete-image")[0]?.click();
+        $("swiper-container")[0].swiper.slideNext();
+    };
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'd') {
+            event.preventDefault();
+            deleteAndMoveOn();
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'n') {
+            event.preventDefault();
+            $("swiper-container")[0].swiper.slideNext();
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'p') {
+            event.preventDefault();
+            $("swiper-container")[0].swiper.slidePrev();
+        }
+    });
+    """
+)
 
 
 def get_page_images():
     matches = sorted(
-        list(iter_glob_photos()),
-        key=lambda _: _.stat().st_mtime,
-        reverse=True
+        list(iter(app_gallery)), key=lambda _: _.stat().st_mtime, reverse=True
     )
     if not matches:
         print(f"No images found in {GALLERY_DIR}")
-        sys.exit(1)
+        return []
     tags = []
     for count, img_path in enumerate(matches, 1):
-        if count > LOAD_LIMIT:
+        if count > args.load_limit:
             break
         gallery_path = str(img_path.relative_to(GALLERY_DIR))
         tags.append(
             Div(
                 Div(
                     id=f"lazy-image-{count}",
-                    hx_trigger="revealed throttle:2s",
+                    hx_trigger="intersect once throttle:2s",
                     hx_get="/image_element",
                     hx_vals={"gallery_path": gallery_path},
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
-                )(
-                    P(f"image #{count} at"),
-                    Code(gallery_path)
-                ),
+                )(P(f"image #{count} at"), Code(gallery_path)),
                 Form(hx_post="/image_action")(
-                    Button(f"Delete {img_path}", type="submit"),
+                    Button(f"Delete {img_path}", type="submit", cls="delete-image"),
                     Input(type="hidden", name="gallery_path", value=gallery_path),
                     Input(type="hidden", name="action", value="delete"),
                     hx_swap="innerHTML",
                     hx_target=f"#container-image-{count}",
-                    style="""border: 1px;""".strip()
+                    style="""border: 1px;""".strip(),
                 ),
                 id=f"container-image-{count}",
             )
@@ -117,16 +89,38 @@ def get_page_images():
     return tags
 
 
-app, rt = fast_app(static_path=args.directory, live=args.debug, debug=args.debug)
+app, rt = fast_app(
+    hdrs=(
+        jquery_js,
+        swiper_js,
+        custom_handlers,
+    ),
+    static_path=args.directory,
+    live=args.debug,
+    debug=args.debug,
+)
 reg_re_param("imgext", "ico|gif|GIF|heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP")
-app.static_route_exts(prefix="/", static_path=args.directory, exts='imgext')
+app.static_route_exts(prefix="/", static_path=args.directory, exts="imgext")
 setup_toasts(app)
 
-reg_re_param("path_segments", r'[^\.]+')
+reg_re_param("path_segments", r"[^\.]+")
+
 
 @rt("/image_element")
-def get(session, gallery_path: str):
-    return Img(src=f"{gallery_path}", style="height: 50vh")
+async def get(session, gallery_path: str):
+    try:
+        data_uri_src = await app_gallery.get_image_as_base64(gallery_path)
+        return Img(src=f"{data_uri_src}", style="height: auto; width: auto;")
+    except FileNotFoundError:
+        return P(
+            f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
+        )
+
+
+def log_notif(notif, send_toast=False, **toast_kwargs):
+    print(notif)
+    if send_toast:
+        add_toast(notif, **toast_kwargs)
 
 
 @rt("/image_action")
@@ -134,50 +128,58 @@ async def post(session, action: str, gallery_path: str):
     if action not in ["delete"]:
         return Response(f"{action=} not supported", status_code=403)
 
-    target = (GALLERY_DIR / gallery_path).resolve()
-    try:
-        # safety: do not allow user to traverse above the gallery dir
-        target.relative_to(GALLERY_DIR)
-    except ValueError:
-        return Response(f"cannot jailbreak to {target=}", status_code=403)
-
-    if action.lower() == "delete":
-        if target.exists():
-            target.unlink()
-            notif = f"Deleted {target.as_posix()!r}"
-            add_toast(session, notif, typ="success")
-        else:
-            notif = f"Does not exist: {target.as_posix()!r}"
-            add_toast(session, notif, typ="warning")
+    if action.strip().lower() == "delete":
+        try:
+            target, success = await app_gallery.delete_item(gallery_path)
+            if success:
+                notif = f"Deleted {target.as_posix()!r}"
+                log_notif(notif, typ="success")
+            else:
+                notif = f"Does not exist: {target.as_posix()!r}"
+                log_notif(notif, typ="warning")
+        except gallery.InvalidPathValueError:
+            return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
 
     return Response(notif)
 
 
-def _gallery_page(title, img_elems):
+def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "default"):
     num_images = len(img_elems)
+    if mode == "default":
+        nav_links = A(href="/shuffled")("Shuffled")
+    else:
+        nav_links = A(href="/")("Default")
     return Titled(
         title,
-        P(Span("Directory"), Code(GALLERY_DIR)),
-        P(f"{num_images} images listed"),
-        Ol(*img_elems)
+        P(Span("Directory"), Code(GALLERY_DIR), Span(f"{num_images} images")),
+        nav_links,
+        Swiper_Container(
+            *[Swiper_Slide(_, lazy=True) for _ in img_elems],
+            # https://swiperjs.com/swiper-api#parameters
+            keyboard_enabled=True,
+            lazy_preload_prev_next=True,
+            # centered_slides=True,
+            navigation=True,
+            pagination=False,
+            scroolbar=True,
+            speed=100,
+        ),
+        Div()(B("Keyboard Controls: "), Kbd("d"), Span("to delete image and move on")),
     )
+
 
 @rt("/")
 def get(session):
-    img_elems = [Li(img_tag) for img_tag in get_page_images()]
-    return _gallery_page("mflux gallery", img_elems)
+    return _gallery_page("gallery - latest", get_page_images(), mode="default")
+
 
 @rt("/shuffled")
 def get(session):
-    img_elems = [Li(img_tag) for img_tag in get_page_images()]
+    img_elems = get_page_images()
     random.shuffle(img_elems)
-    return _gallery_page("mflux gallery - shuffled", img_elems)
+    return _gallery_page("gallery - shuffled", img_elems, mode="shuffled")
 
 
 print(f"Port: {args.port}")
 print(f"Delete Mode: {args.delete_mode}")
-serve(
-    host=args.host,
-    port=args.port,
-    reload=args.debug
-)
+serve(host=args.host, port=args.port, reload=args.debug)
