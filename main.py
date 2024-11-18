@@ -1,5 +1,6 @@
 import os
 import random
+import time
 import typing as t
 
 from fasthtml.common import *
@@ -50,6 +51,17 @@ custom_handlers = Script(
     """
 )
 
+def get_created_recency_description(path_st_mtime):
+    diff_secs = time.time() - path_st_mtime
+    if diff_secs < 60:
+        return f"just created"
+    if diff_secs < 3_600:
+        return f"{diff_secs / 60:,.0f} min ago"
+    elif diff_secs < 86_400:
+        return f"{diff_secs / 3_600:,.0f} hours ago"
+    else:
+        return f"{diff_secs / 86_400:,.0f} days ago"
+
 
 def get_page_images():
     matches = sorted(
@@ -67,6 +79,7 @@ def get_page_images():
             Details(
                 Summary(
                     Mark(Small(f"{count} / {len(matches)} 📂 gallery_path")),
+                    Small(get_created_recency_description(img_path.stat().st_mtime)),
                     Progress(value=count, max=len(matches)),
                 ),
                 Div(
