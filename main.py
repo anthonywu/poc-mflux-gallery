@@ -146,13 +146,19 @@ async def post(session, action: str, gallery_path: str):
 def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "default"):
     num_images = len(img_elems)
     if mode == "default":
-        nav_links = A(href="/shuffled")("Shuffled")
+        nav_links = [
+            A(href="/", role="button")("Latest"),
+            A(href="/shuffled", role="button", cls="contrast secondary outline")("Shuffled")
+        ]
     else:
-        nav_links = A(href="/")("Default")
+        nav_links = [
+            A(href="/", role="button", cls="contrast secondary outline")("Latest"),
+            A(href="/shuffled", role="button")("Shuffled")
+        ]
     return Titled(
-        title,
-        P(Span("Directory"), Code(GALLERY_DIR), Span(f"{num_images} images")),
-        nav_links,
+        f"📂 {title}",
+        P(Span(f"{num_images} images: "), Code(GALLERY_DIR)),
+        Div(role="group")(*nav_links),
         Swiper_Container(
             *[Swiper_Slide(_, lazy=True) for _ in img_elems],
             # https://swiperjs.com/swiper-api#parameters
@@ -170,14 +176,14 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
 
 @rt("/")
 def get(session):
-    return _gallery_page("gallery - latest", get_page_images(), mode="default")
+    return _gallery_page("gallery", get_page_images(), mode="default")
 
 
 @rt("/shuffled")
 def get(session):
     img_elems = get_page_images()
     random.shuffle(img_elems)
-    return _gallery_page("gallery - shuffled", img_elems, mode="shuffled")
+    return _gallery_page("gallery", img_elems, mode="shuffled")
 
 
 print(f"Port: {args.port}")
