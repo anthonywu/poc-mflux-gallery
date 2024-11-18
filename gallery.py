@@ -3,14 +3,16 @@ import io
 from pathlib import Path
 
 from PIL import Image
+from pillow_heif import register_heif_opener
 
+register_heif_opener()
 
 class InvalidPathValueError(ValueError):
     pass
 
 
 class Gallery:
-    DEFAULT_PHOTO_SUFFIXES = [".jpg", ".jpeg", ".png"]
+    DEFAULT_PHOTO_SUFFIXES = [".jpg", ".jpeg", ".png", ".heic"]
 
     def __init__(
         self,
