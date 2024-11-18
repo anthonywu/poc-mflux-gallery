@@ -24,16 +24,13 @@ jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
 custom_handlers = Script(
     """
-    // Add a global keydown listener
-    const deleteAndMoveOn = () => {
-        $(".swiper-slide-active button.delete-image")[0]?.click();
+    document.addEventListener('delete-successful', function(event) {
         $("swiper-container")[0].swiper.slideNext();
-    };
+    });
 
     document.addEventListener('keydown', function(event) {
         if (event.key === 'd') {
-            event.preventDefault();
-            deleteAndMoveOn();
+            $(".swiper-slide-active button.delete-image")[0]?.click();
         }
     });
 
@@ -141,20 +138,20 @@ async def post(session, action: str, gallery_path: str):
         except gallery.InvalidPathValueError:
             return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
 
-    return Response(notif)
+    return Response(notif), HtmxResponseHeaders(trigger="delete-successful")
 
 
 def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "default"):
     num_images = len(img_elems)
     if mode == "default":
         nav_links = [
-            A(href="/", role="button")("Latest"),
-            A(href="/shuffled", role="button", cls="contrast secondary outline")("Shuffled")
+            A(href="/", role="button")("Latest ▶️"),
+            A(href="/shuffled", role="button", cls="contrast secondary outline")("Shuffled 🔀")
         ]
     else:
         nav_links = [
-            A(href="/", role="button", cls="contrast secondary outline")("Latest"),
-            A(href="/shuffled", role="button")("Shuffled")
+            A(href="/", role="button", cls="contrast secondary outline")("Latest ▶️"),
+            A(href="/shuffled", role="button")("Shuffled 🔀")
         ]
     return Titled(
         f"📂 {title}",
