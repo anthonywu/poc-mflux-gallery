@@ -76,13 +76,14 @@ def get_page_images():
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
                 )(P(f"image #{count} at"), Code(gallery_path)),
                 Form(hx_post="/image_action")(
-                    Button(f"Delete {img_path}", type="submit", cls="delete-image"),
+                    Button(f"Delete {img_path}", type="submit", cls="contrast delete-image"),
                     Input(type="hidden", name="gallery_path", value=gallery_path),
                     Input(type="hidden", name="action", value="delete"),
                     hx_swap="innerHTML",
                     hx_target=f"#container-image-{count}",
                     style="""border: 1px;""".strip(),
                 ),
+                P(Mark(f"{count} / {len(matches)}")),
                 id=f"container-image-{count}",
             )
         )
@@ -170,7 +171,9 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
             scroolbar=True,
             speed=100,
         ),
-        Div()(B("Keyboard Controls: "), Kbd("d"), Span("to delete image and move on")),
+        Footer(
+            Div()(B("Keyboard Controls: "), Kbd("d"), Span("to delete image and move on"))
+        ),
     )
 
 
@@ -183,7 +186,7 @@ def get(session):
 def get(session):
     img_elems = get_page_images()
     random.shuffle(img_elems)
-    return _gallery_page("gallery", img_elems, mode="shuffled")
+    return _gallery_page("gallery review", img_elems, mode="shuffled")
 
 
 print(f"Port: {args.port}")
