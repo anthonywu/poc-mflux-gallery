@@ -64,24 +64,34 @@ def get_page_images():
             break
         gallery_path = str(img_path.relative_to(GALLERY_DIR))
         tags.append(
-            Div(
+            Details(
+                Summary(
+                    Mark(Small(f"{count} / {len(matches)} 📂 gallery_path")),
+                    Progress(value=count, max=len(matches)),
+                ),
                 Div(
                     id=f"lazy-image-{count}",
                     hx_trigger="intersect once throttle:2s",
                     hx_get="/image_element",
                     hx_vals={"gallery_path": gallery_path},
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
-                )(P(f"image #{count} at"), Code(gallery_path)),
+                )(
+                    Span(aria_busy=True)(f"Loading {gallery_path}")
+                ),
                 Form(hx_post="/image_action")(
-                    Button(f"Delete {img_path}", type="submit", cls="contrast delete-image"),
+                    Button(
+                        f"☄️ Delete {gallery_path}", type="submit",
+                        cls="contrast delete-image",
+                        style="background-color: rgba(255, 0, 0, .6); position: relative; left: 20px; bottom: 60px; width: 90vw; z-index: 1000;"
+                    ),
                     Input(type="hidden", name="gallery_path", value=gallery_path),
                     Input(type="hidden", name="action", value="delete"),
                     hx_swap="innerHTML",
                     hx_target=f"#container-image-{count}",
                     style="""border: 1px;""".strip(),
                 ),
-                P(Mark(f"{count} / {len(matches)}")),
                 id=f"container-image-{count}",
+                open=True
             )
         )
     return tags
@@ -153,19 +163,23 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
             A(href="/", role="button", cls="contrast secondary outline")("Latest ▶️"),
             A(href="/shuffled", role="button")("Shuffled 🔀")
         ]
-    return Titled(
-        f"📂 {title}",
-        P(Span(f"{num_images} images: "), Code(GALLERY_DIR)),
-        Div(role="group")(*nav_links),
+    return Div(
+        Nav()(
+            Ul()(
+                Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
+                Li(A(href="/")("Latest ▶️")),
+                Li(A(href="/shuffled")("Shuffled 🔀"))
+            )
+        ),
         Swiper_Container(
             *[Swiper_Slide(_, lazy=True) for _ in img_elems],
             # https://swiperjs.com/swiper-api#parameters
             keyboard_enabled=True,
             lazy_preload_prev_next=True,
             # centered_slides=True,
-            navigation=True,
+            navigation=False,
             pagination=False,
-            scroolbar=True,
+            scroolbar=False,
             speed=100,
         ),
         Footer(
@@ -183,7 +197,7 @@ def get(session):
 def get(session):
     img_elems = get_page_images()
     random.shuffle(img_elems)
-    return _gallery_page("gallery review", img_elems, mode="shuffled")
+    return _gallery_page("gallery", img_elems, mode="shuffled")
 
 
 print(f"Port: {args.port}")
