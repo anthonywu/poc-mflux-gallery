@@ -59,6 +59,15 @@ custom_handlers = Script(
     """
 )
 
+custom_css = Style(
+    """
+    @media only screen and (max-width:393px) {
+        button.show-in-finder {
+            display: none;
+        }
+    }
+    """
+)
 
 def get_created_recency_description(path_st_mtime):
     diff_secs = time.time() - path_st_mtime
@@ -107,14 +116,14 @@ def get_page_images():
                                 Kbd("f"),
                                 type="submit",
                                 cls="secondary show-in-finder",
-                                style="width: 100%;",
-                                hx_swap=None,
+                                style="width: 100%;"
                             ),
                             Input(
                                 type="hidden", name="gallery_path", value=gallery_path
                             ),
                             Input(type="hidden", name="action", value="show-in-finder"),
-                        )
+                        ),
+                        hx_swap="none",
                     ),
                     Div(
                         Form(hx_post="/image_action")(
@@ -146,6 +155,7 @@ app, rt = fast_app(
         jquery_js,
         swiper_js,
         custom_handlers,
+        custom_css,
     ),
     static_path=args.directory,
     live=args.debug,
