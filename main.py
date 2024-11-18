@@ -14,7 +14,9 @@ parser = cli.create_parser()
 args = parser.parse_args()
 
 
-app_gallery = gallery.Gallery(GALLERY_DIR := args.directory.resolve())
+app_gallery = gallery.Gallery(
+    GALLERY_DIR := args.directory.resolve(), resize_max_width=args.resize_max_width
+)
 os.chdir(GALLERY_DIR)
 
 swiper_js = Script(
@@ -27,6 +29,12 @@ custom_handlers = Script(
     """
     document.addEventListener('delete-successful', function(event) {
         $("swiper-container")[0].swiper.slideNext();
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'f') {
+            $(".swiper-slide-active button.show-in-finder")[0]?.click();
+        }
     });
 
     document.addEventListener('keydown', function(event) {
@@ -51,10 +59,11 @@ custom_handlers = Script(
     """
 )
 
+
 def get_created_recency_description(path_st_mtime):
     diff_secs = time.time() - path_st_mtime
     if diff_secs < 60:
-        return f"just created"
+        return "just created"
     if diff_secs < 3_600:
         return f"{diff_secs / 60:,.0f} min ago"
     elif diff_secs < 86_400:
@@ -78,7 +87,7 @@ def get_page_images():
         tags.append(
             Details(
                 Summary(
-                    Mark(Small(f"{count} / {len(matches)} 📂 gallery_path")),
+                    Mark(Small(f"{count} / {len(matches)} 📂 {gallery_path}")),
                     Small(get_created_recency_description(img_path.stat().st_mtime)),
                     Progress(value=count, max=len(matches)),
                 ),
@@ -88,23 +97,45 @@ def get_page_images():
                     hx_get="/image_element",
                     hx_vals={"gallery_path": gallery_path},
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
-                )(
-                    Span(aria_busy=True)(f"Loading {gallery_path}")
-                ),
-                Form(hx_post="/image_action")(
-                    Button(
-                        f"☄️ Delete {gallery_path}", type="submit",
-                        cls="contrast delete-image",
-                        style="background-color: rgba(255, 0, 0, .6); position: relative; left: 20px; bottom: 60px; width: 90vw; z-index: 1000;"
+                )(Span(aria_busy=True)(f"Loading {gallery_path}")),
+                Div(cls="grid image-actions", style="margin-top: 10px;")(
+                    Div(),  # empty filler
+                    Div(
+                        Form(hx_post="/image_action")(
+                            Button(
+                                "🔍 Show in Finder ",
+                                Kbd("f"),
+                                type="submit",
+                                cls="secondary show-in-finder",
+                                style="width: 100%;",
+                                hx_swap=None,
+                            ),
+                            Input(
+                                type="hidden", name="gallery_path", value=gallery_path
+                            ),
+                            Input(type="hidden", name="action", value="show-in-finder"),
+                        )
                     ),
-                    Input(type="hidden", name="gallery_path", value=gallery_path),
-                    Input(type="hidden", name="action", value="delete"),
-                    hx_swap="innerHTML",
-                    hx_target=f"#container-image-{count}",
-                    style="""border: 1px;""".strip(),
+                    Div(
+                        Form(hx_post="/image_action")(
+                            Button(
+                                "🔥 Delete ",
+                                Kbd("d"),
+                                type="submit",
+                                cls="contrast delete-image",
+                                style="width: 100%;",
+                            ),
+                            Input(
+                                type="hidden", name="gallery_path", value=gallery_path
+                            ),
+                            Input(type="hidden", name="action", value="delete"),
+                            hx_swap="innerHTML",
+                            hx_target=f"#container-image-{count}",
+                        ),
+                    ),
                 ),
                 id=f"container-image-{count}",
-                open=True
+                open=True,
             )
         )
     return tags
@@ -138,50 +169,52 @@ async def get(session, gallery_path: str):
         )
 
 
-def log_notif(notif, send_toast=False, **toast_kwargs):
+def log_notif(session, notif, send_toast=False, **toast_kwargs):
     print(notif)
     if send_toast:
-        add_toast(notif, **toast_kwargs)
+        add_toast(session, notif, **toast_kwargs)
 
 
 @rt("/image_action")
 async def post(session, action: str, gallery_path: str):
-    if action not in ["delete"]:
+    action = action.strip().lower()
+    if action not in ["delete", "show-in-finder"]:
         return Response(f"{action=} not supported", status_code=403)
 
-    if action.strip().lower() == "delete":
-        try:
-            target, success = await app_gallery.delete_item(gallery_path)
+    try:
+        if action == "delete":
+            target, success = await app_gallery.delete_item(
+                gallery_path, delete_other_suffixes=[".json"]
+            )
             if success:
                 notif = f"Deleted {target.as_posix()!r}"
-                log_notif(notif, typ="success")
+                log_notif(session, notif, typ="success")
             else:
                 notif = f"Does not exist: {target.as_posix()!r}"
-                log_notif(notif, typ="warning")
-        except gallery.InvalidPathValueError:
-            return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
-
-    return Response(notif), HtmxResponseHeaders(trigger="delete-successful")
+                log_notif(session, notif, typ="warning")
+            return Response(notif), HtmxResponseHeaders(trigger="delete-successful")
+        elif action == "show-in-finder":
+            target, success, error_msg = await app_gallery.show_in_finder(gallery_path)
+            if success:
+                notif = f"Opened {target.as_posix()!r} in Finder."
+                log_notif(session, notif, send_toast=True, typ="success")
+                return Response(notif)
+            else:
+                notif = f"{error_msg}"
+                log_notif(session, notif, send_toast=True, typ="error")
+                return Response(notif, status_code=500)
+    except gallery.InvalidPathValueError:
+        return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
 
 
 def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "default"):
     num_images = len(img_elems)
-    if mode == "default":
-        nav_links = [
-            A(href="/", role="button")("Latest ▶️"),
-            A(href="/shuffled", role="button", cls="contrast secondary outline")("Shuffled 🔀")
-        ]
-    else:
-        nav_links = [
-            A(href="/", role="button", cls="contrast secondary outline")("Latest ▶️"),
-            A(href="/shuffled", role="button")("Shuffled 🔀")
-        ]
-    return Div(
+    return Title(GALLERY_DIR), Div(
         Nav()(
             Ul()(
                 Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
                 Li(A(href="/")("Latest ▶️")),
-                Li(A(href="/shuffled")("Shuffled 🔀"))
+                Li(A(href="/shuffled")("Shuffled 🔀")),
             )
         ),
         Swiper_Container(
@@ -196,7 +229,13 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
             speed=100,
         ),
         Footer(
-            Div()(B("Keyboard Controls: "), Kbd("d"), Span("to delete image and move on"))
+            Div()(
+                H4("Keyboard Controls: "),
+                Ul(
+                    Li(Kbd("d"), Span("Delete image and advance slide")),
+                    Li(Kbd("f"), Span("Show in Finder")),
+                ),
+            )
         ),
     )
 

@@ -57,4 +57,12 @@ def create_parser():
         help="Specify the debug mode - more verbose and instant reload.",
     )
 
+    parser.add_argument(
+        "--resize-max-width",
+        type=int,
+        required=False,
+        default=512,
+        help="Specify the maximum width for image resizing (default: 512)",
+    )
+
     return parser

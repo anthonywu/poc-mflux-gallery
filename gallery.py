@@ -1,11 +1,13 @@
 import base64
 import io
+import subprocess
 from pathlib import Path
 
 from PIL import Image
 from pillow_heif import register_heif_opener
 
 register_heif_opener()
+
 
 class InvalidPathValueError(ValueError):
     pass
@@ -34,7 +36,7 @@ class Gallery:
                     yield _
                 count += 1
 
-    async def get_image_as_base64(self, gallery_path, format="PNG"):
+    async def get_image_as_base64(self, gallery_path, format="PNG") -> str:
         with Image.open(self.gallery_dir / gallery_path) as img:
             original_width, original_height = img.size
             if self.resize_max_width and self.resize_max_width < original_width:
@@ -51,16 +53,35 @@ class Gallery:
         base64_str = base64.b64encode(img_bytes).decode("utf-8")
         return f"data:image/{format.lower()};base64,{base64_str}"
 
-    async def delete_item(self, gallery_path: str | Path) -> tuple[Path, bool]:
+    async def resolve_target(self, gallery_path: str | Path) -> Path:
         try:
             target = (self.gallery_dir / gallery_path).resolve()
             # safety: do not allow user to traverse above the gallery dir
             target.relative_to(self.gallery_dir)
+            return target
         except ValueError as ve:
             raise InvalidPathValueError(f"cannot jailbreak to {target=}") from ve
 
+    async def delete_item(
+        self, gallery_path: str | Path, delete_other_suffixes: list[str] | None
+    ) -> tuple[Path, bool]:
+        target = await self.resolve_target(gallery_path)
         if target.exists():
             target.unlink()
+            if delete_other_suffixes:
+                for suf in delete_other_suffixes:
+                    target_suf = target.with_suffix(suf)
+                    if target_suf.exists():
+                        target_suf.unlink()
             return target, True
         else:
             return target, False
+
+    async def show_in_finder(self, gallery_path: str | Path):
+        target = await self.resolve_target(gallery_path)
+        try:
+            return target, True, subprocess.call(["/usr/bin/open", "-R", str(target)])
+        except subprocess.SubprocessError as e:
+            return target, False, f"Failed to open Finder for {target}: {e}"
+        except OSError as e:
+            return target, False, f"OS error occurred trying to open {target}: {e}"
