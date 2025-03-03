@@ -65,6 +65,9 @@ custom_css = Style(
         button.show-in-finder {
             display: none;
         }
+        div#keyboard-controls {
+            display: none;
+        }
     }
     """
 )
@@ -239,7 +242,7 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
             speed=100,
         ),
         Footer(
-            Div()(
+            Div(id="keyboard-controls")(
                 H4("Keyboard Controls: "),
                 Ul(
                     Li(Kbd("d"), Span("Delete image and advance slide")),
