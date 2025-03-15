@@ -63,7 +63,7 @@ class Gallery:
             raise InvalidPathValueError(f"cannot jailbreak to {target=}") from ve
 
     async def delete_item(
-        self, gallery_path: str | Path, delete_other_suffixes: list[str] | None
+        self, gallery_path: str | Path, delete_other_suffixes: list[str] | None = None
     ) -> tuple[Path, bool]:
         target = await self.resolve_target(gallery_path)
         if target.exists():

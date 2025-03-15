@@ -72,6 +72,7 @@ custom_css = Style(
     """
 )
 
+
 def get_created_recency_description(path_st_mtime):
     diff_secs = time.time() - path_st_mtime
     if diff_secs < 60:
@@ -119,7 +120,7 @@ def get_page_images():
                                 Kbd("f"),
                                 type="submit",
                                 cls="secondary show-in-finder",
-                                style="width: 100%;"
+                                style="width: 100%;",
                             ),
                             Input(
                                 type="hidden", name="gallery_path", value=gallery_path
@@ -175,7 +176,16 @@ reg_re_param("path_segments", r"[^\.]+")
 async def get(session, gallery_path: str):
     try:
         data_uri_src = await app_gallery.get_image_as_base64(gallery_path)
-        return Img(src=f"{data_uri_src}", style="height: auto; width: auto;")
+        return Div(
+            cls="swiper-zoom-container",
+            style="width: 100%; display: flex; justify-content: center;",
+        )(
+            Img(
+                src=f"{data_uri_src}",
+                style="height: auto; width: auto; max-width: 100%;",
+                cls="swiper-zoom-target",
+            )
+        )
     except FileNotFoundError:
         return P(
             f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
@@ -240,6 +250,7 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
             pagination=False,
             scroolbar=False,
             speed=100,
+            zoom=True,
         ),
         Footer(
             Div(id="keyboard-controls")(
