@@ -19,8 +19,8 @@ def create_parser():
         "--host",
         type=str,
         required=False,
-        default="0.0.0.0",
-        help="The port number to run the gallery server on (default: 0.0.0.0)",
+        default="127.0.0.1",
+        help="The host address to run the gallery server on (default: 127.0.0.1)",
     )
 
     # Optional argument for the port

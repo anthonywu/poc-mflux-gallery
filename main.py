@@ -276,6 +276,11 @@ def get(session):
     return _gallery_page("gallery", img_elems, mode="shuffled")
 
 
-print(f"Port: {args.port}")
-print(f"Delete Mode: {args.delete_mode}")
-serve(host=args.host, port=args.port, reload=args.debug)
+def main():
+    print(f"Port: {args.port}")
+    print(f"Delete Mode: {args.delete_mode}")
+    serve(host=args.host, port=args.port, reload=args.debug)
+
+
+if __name__ == "__main__":
+    main()
