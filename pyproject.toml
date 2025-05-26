@@ -1,10 +1,23 @@
+[build-system]
+requires = ["setuptools>=80", "wheel>=0.45"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mflux-gallery"
 version = "0.1.0"
 description = "A FastHTML-based image gallery for viewing generated images"
+dependencies = [
+    "pillow-heif>=0.22.0,<1.0",
+    "pillow>=11.0,<12",
+    "python-fasthtml>=0.12,<1.0",
+    "rich>=14.0,<15.0",
+]
 
 [project.scripts]
-mflux-gallery = "main:main"
+mflux-gallery = "mflux_gallery.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
@@ -12,7 +25,7 @@ mflux-gallery = "main:main"
 # McCabe complexity (`C901`) by default.
 select = ["BLE", "E4", "E7", "E9", "F", "I", "ICN", "LOG", "PERF", "W"]
 ignore = [
-  "F403", # ignore undefined names
-  "F405", # ignore star imports
-  "F811", # ignore reused get/post definitions
+    "F403", # ignore undefined names
+    "F405", # ignore star imports
+    "F811", # ignore reused get/post definitions
 ]

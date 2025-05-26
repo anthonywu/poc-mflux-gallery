@@ -7,17 +7,27 @@ from fasthtml.common import *
 from fasthtml.components import Swiper_Container, Swiper_Slide
 from rich import print  # noqa
 
-import cli
-import gallery
+from . import cli, gallery
 
 parser = cli.create_parser()
 args = parser.parse_args()
 
+GALLERY_DIR = args.directory.resolve()
 
-app_gallery = gallery.Gallery(
-    GALLERY_DIR := args.directory.resolve(), resize_max_width=args.resize_max_width
-)
-os.chdir(GALLERY_DIR)
+if not GALLERY_DIR.exists():
+    print(f"Error: Directory '{GALLERY_DIR}' does not exist.")
+    exit(1)
+
+if not GALLERY_DIR.is_dir():
+    print(f"Error: '{GALLERY_DIR}' is not a directory.")
+    exit(1)
+
+try:
+    app_gallery = gallery.Gallery(GALLERY_DIR, resize_max_width=args.resize_max_width)
+    os.chdir(GALLERY_DIR)
+except (FileNotFoundError, PermissionError) as e:
+    print(f"Error accessing directory '{GALLERY_DIR}': {e}")
+    exit(1)
 
 swiper_js = Script(
     src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
