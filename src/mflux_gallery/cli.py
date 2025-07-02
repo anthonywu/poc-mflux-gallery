@@ -35,6 +35,7 @@ def create_parser():
     # Optional argument for delete mode
     parser.add_argument(
         "--delete-mode",
+        "-d",
         required=False,
         choices=["trash", "permanent"],
         default="permanent",
@@ -43,10 +44,11 @@ def create_parser():
 
     parser.add_argument(
         "--load-limit",
+        "-l",
         type=int,
         required=False,
-        default=1000,
-        help="Specify the maximum number of images to load (default: 1000)",
+        default=100,
+        help="Specify the maximum number of images to load (default: 100)",
     )
 
     parser.add_argument(
@@ -59,6 +61,7 @@ def create_parser():
 
     parser.add_argument(
         "--resize-max-width",
+        "-w",
         type=int,
         required=False,
         default=512,
