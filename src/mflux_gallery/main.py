@@ -6,6 +6,7 @@ import typing as t
 from fasthtml.common import *
 from fasthtml.components import Swiper_Container, Swiper_Slide
 from rich import print  # noqa
+from starlette.responses import RedirectResponse
 
 from . import cli, gallery
 
@@ -95,7 +96,7 @@ def get_created_recency_description(path_st_mtime):
         return f"{diff_secs / 86_400:,.0f} days ago"
 
 
-def get_page_images(sort_order="newest"):
+def get_page_images(sort_order="newest", resize_width=None):
     reverse = sort_order == "newest"
     matches = sorted(
         list(iter(app_gallery)), key=lambda _: _.stat().st_mtime, reverse=reverse
@@ -108,6 +109,12 @@ def get_page_images(sort_order="newest"):
         if count > args.load_limit:
             break
         gallery_path = str(img_path.relative_to(GALLERY_DIR))
+
+        # Prepare hx_vals with gallery_path and optional resize_width
+        hx_vals = {"gallery_path": gallery_path}
+        if resize_width is not None:
+            hx_vals["resize_width"] = resize_width
+
         tags.append(
             Details(
                 Summary(
@@ -119,7 +126,7 @@ def get_page_images(sort_order="newest"):
                     id=f"lazy-image-{count}",
                     hx_trigger="intersect once throttle:2s",
                     hx_get="/image_element",
-                    hx_vals={"gallery_path": gallery_path},
+                    hx_vals=hx_vals,
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
                 )(Span(aria_busy=True)(f"Loading {gallery_path}")),
                 Div(cls="grid image-actions", style="margin-top: 10px;")(
@@ -184,9 +191,14 @@ reg_re_param("path_segments", r"[^\.]+")
 
 
 @rt("/image_element")
-async def get(session, gallery_path: str):
+async def get(session, gallery_path: str, resize_width: int = None):
     try:
-        data_uri_src = await app_gallery.get_image_as_base64(gallery_path)
+        # Use provided resize_width or fall back to the default
+        if resize_width is None:
+            resize_width = args.resize_max_width
+        data_uri_src = await app_gallery.get_image_as_base64(
+            gallery_path, resize_max_width=resize_width
+        )
         return Div(
             cls="swiper-zoom-container",
             style="width: 100%; display: flex; justify-content: center;",
@@ -242,16 +254,35 @@ async def post(session, action: str, gallery_path: str):
 
 
 def _gallery_page(
-    title, img_elems, mode: t.Literal["default", "shuffled", "oldest"] = "default"
+    title,
+    img_elems,
+    mode: t.Literal["default", "shuffled", "oldest"] = "default",
+    resize_width: int = None,
 ):
     num_images = len(img_elems)
+    # Determine current resize width for dropdown
+    current_resize = resize_width if resize_width is not None else args.resize_max_width
+
     return Title(GALLERY_DIR), Div(
         Nav()(
             Ul()(
                 Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
-                Li(A(href="/")("Latest ▶️")),
-                Li(A(href="/oldest")("Oldest ◀️")),
-                Li(A(href="/shuffled")("Shuffled 🔀")),
+                Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
+                Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
+                Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
+                Li()(
+                    Label("Max Width: ", For="resize-select", style="margin-right: 5px;"),
+                    Select(
+                        id="resize-select",
+                        name="resize_width",
+                        onchange=f"window.location.href = '{'/' if mode == 'default' else '/' + mode}?resize_width=' + this.value",
+                    )(
+                        Option("256px", value="256", selected=(current_resize == 256)),
+                        Option("512px", value="512", selected=(current_resize == 512)),
+                        Option("768px", value="768", selected=(current_resize == 768)),
+                        Option("1024px", value="1024", selected=(current_resize == 1024)),
+                    ),
+                ),
             )
         ),
         Swiper_Container(
@@ -279,20 +310,35 @@ def _gallery_page(
 
 
 @rt("/")
-def get(session):
-    return _gallery_page("gallery", get_page_images(), mode="default")
+def get(session, resize_width: int = None):
+    # Redirect to include resize_width parameter if not present
+    if resize_width is None:
+        return RedirectResponse(f"/?resize_width={args.resize_max_width}")
+    img_elems = get_page_images(resize_width=resize_width)
+    return _gallery_page(
+        "gallery", img_elems, mode="default", resize_width=resize_width
+    )
 
 
 @rt("/oldest")
-def get(session):
-    return _gallery_page("gallery", get_page_images(sort_order="oldest"), mode="oldest")
+def get(session, resize_width: int = None):
+    # Redirect to include resize_width parameter if not present
+    if resize_width is None:
+        return RedirectResponse(f"/oldest?resize_width={args.resize_max_width}")
+    img_elems = get_page_images(sort_order="oldest", resize_width=resize_width)
+    return _gallery_page("gallery", img_elems, mode="oldest", resize_width=resize_width)
 
 
 @rt("/shuffled")
-def get(session):
-    img_elems = get_page_images()
+def get(session, resize_width: int = None):
+    # Redirect to include resize_width parameter if not present
+    if resize_width is None:
+        return RedirectResponse(f"/shuffled?resize_width={args.resize_max_width}")
+    img_elems = get_page_images(resize_width=resize_width)
     random.shuffle(img_elems)
-    return _gallery_page("gallery", img_elems, mode="shuffled")
+    return _gallery_page(
+        "gallery", img_elems, mode="shuffled", resize_width=resize_width
+    )
 
 
 def main():

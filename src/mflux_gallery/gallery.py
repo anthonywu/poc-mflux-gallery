@@ -36,15 +36,20 @@ class Gallery:
                     yield _
                 count += 1
 
-    async def get_image_as_base64(self, gallery_path, format="PNG") -> str:
+    async def get_image_as_base64(
+        self, gallery_path, format="PNG", resize_max_width: int = None
+    ) -> str:
+        # Use provided resize_max_width or fall back to instance default
+        resize_width = (
+            resize_max_width if resize_max_width is not None else self.resize_max_width
+        )
+
         with Image.open(self.gallery_dir / gallery_path) as img:
             original_width, original_height = img.size
-            if self.resize_max_width and self.resize_max_width < original_width:
-                resize_height = int(
-                    (self.resize_max_width / original_width) * original_height
-                )
+            if resize_width and resize_width < original_width:
+                resize_height = int((resize_width / original_width) * original_height)
                 img = img.resize(
-                    (self.resize_max_width, resize_height), Image.Resampling.LANCZOS
+                    (resize_width, resize_height), Image.Resampling.LANCZOS
                 )
             buffer = io.BytesIO()
             img.save(buffer, format=format)
