@@ -95,9 +95,10 @@ def get_created_recency_description(path_st_mtime):
         return f"{diff_secs / 86_400:,.0f} days ago"
 
 
-def get_page_images():
+def get_page_images(sort_order="newest"):
+    reverse = sort_order == "newest"
     matches = sorted(
-        list(iter(app_gallery)), key=lambda _: _.stat().st_mtime, reverse=True
+        list(iter(app_gallery)), key=lambda _: _.stat().st_mtime, reverse=reverse
     )
     if not matches:
         print(f"No images found in {GALLERY_DIR}")
@@ -240,13 +241,16 @@ async def post(session, action: str, gallery_path: str):
         return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
 
 
-def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "default"):
+def _gallery_page(
+    title, img_elems, mode: t.Literal["default", "shuffled", "oldest"] = "default"
+):
     num_images = len(img_elems)
     return Title(GALLERY_DIR), Div(
         Nav()(
             Ul()(
                 Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
                 Li(A(href="/")("Latest ▶️")),
+                Li(A(href="/oldest")("Oldest ◀️")),
                 Li(A(href="/shuffled")("Shuffled 🔀")),
             )
         ),
@@ -277,6 +281,11 @@ def _gallery_page(title, img_elems, mode: t.Literal["default", "shuffled"] = "de
 @rt("/")
 def get(session):
     return _gallery_page("gallery", get_page_images(), mode="default")
+
+
+@rt("/oldest")
+def get(session):
+    return _gallery_page("gallery", get_page_images(sort_order="oldest"), mode="oldest")
 
 
 @rt("/shuffled")
