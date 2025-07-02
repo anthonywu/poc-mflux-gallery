@@ -1,4 +1,4 @@
-This project's name and repo path is subject to change.
+This project's name and repo path is subject to change. The repo name is prefixed with `poc-` to communicate that this is a proof of concept that may not ever publish to PyPi and if/when ready the repo may be renamed as the mission scope increases or decreases.
 
 # Image collection manager
 
@@ -28,23 +28,45 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 
 ## Installation
 
-This project is not meant to be `pip install`ed as a library.
+### Option 1: Install as a CLI tool with uv
 
-Please feel free to fork/reuse the code in this project for your own purposes.
+You can install mflux-gallery directly as a command-line tool using `uv`:
+
+```bash
+# Install from GitHub repository
+uv tool install git+https://github.com/anthonywu/poc-mflux-gallery.git
+
+# The tool will be available as 'mflux-gallery' command
+mflux-gallery /path/to/images
+```
+
+### Option 2: Clone and run locally
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mflux-gallery.git
+git clone https://github.com/anthonywu/poc-mflux-gallery.git mflux-gallery
 cd mflux-gallery
 
-# Install required packages
-pip install -r requirements.txt
+# Create virtual environment and install dependencies with uv
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install the package in development mode
+uv pip install -e .
 ```
 
 ## Usage
 
+### If installed with uv tool:
+
 ```bash
-python main.py /path/to/images [OPTIONS]
+mflux-gallery /path/to/images [OPTIONS]
+```
+
+### If running from source:
+
+```bash
+python -m mflux_gallery.main /path/to/images [OPTIONS]
 ```
 
 ### Command Line Options
