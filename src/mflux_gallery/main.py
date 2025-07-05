@@ -40,7 +40,20 @@ jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 custom_handlers = Script(
     """
     document.addEventListener('delete-successful', function(event) {
-        $("swiper-container")[0].swiper.slideNext();
+        // Get the current active slide index before removal
+        const swiper = $("swiper-container")[0].swiper;
+        const activeIndex = swiper.activeIndex;
+        const slidesCount = swiper.slides.length;
+
+        // Remove the slide from Swiper after a brief delay to ensure DOM update
+        setTimeout(function() {
+            swiper.removeSlide(activeIndex);
+
+            // If we deleted the last slide, go to the previous one
+            if (activeIndex >= slidesCount - 1 && activeIndex > 0) {
+                swiper.slideNext();
+            }
+        }, 100);
     });
 
     document.addEventListener('keydown', function(event) {
@@ -174,8 +187,9 @@ def get_page_images(sort_order="newest", resize_width=None):
                                 type="hidden", name="gallery_path", value=gallery_path
                             ),
                             Input(type="hidden", name="action", value="delete"),
-                            hx_swap="innerHTML",
-                            hx_target=f"#container-image-{count}",
+                            Input(type="hidden", name="slide_delete_index", value=str(count)),
+                            hx_swap="outerHTML",
+                            hx_target=f"#slide-{count}",
                         ),
                     ),
                 ),
@@ -288,7 +302,7 @@ async def post(session, action: str, gallery_path: str):
             else:
                 notif = f"Does not exist: {target.as_posix()!r}"
                 log_notif(session, notif, typ="warning")
-            return Response(notif), HtmxResponseHeaders(trigger="delete-successful")
+            return Response(""), HtmxResponseHeaders(trigger="delete-successful")
         elif action == "show-in-finder":
             target, success, error_msg = await app_gallery.show_in_finder(gallery_path)
             if success:
@@ -340,7 +354,7 @@ def _gallery_page(
             )
         ),
         Swiper_Container(
-            *[Swiper_Slide(_, lazy=True) for _ in img_elems],
+            *[Swiper_Slide(elem, lazy=True, id=f"slide-{i}") for i, elem in enumerate(img_elems, 1)],
             # https://swiperjs.com/swiper-api#parameters
             keyboard_enabled=True,
             lazy_preload_prev_next=True,
