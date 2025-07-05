@@ -70,6 +70,69 @@ custom_handlers = Script(
     // Initialize theme on load
     document.addEventListener('DOMContentLoaded', initTheme);
 
+    // Metadata expansion state handling
+    function initMetadataState() {
+        const savedState = localStorage.getItem('metadataExpanded');
+        // Only apply saved state if it exists (respecting default collapsed state)
+        if (savedState !== null) {
+            document.querySelectorAll('details.metadata-section').forEach(details => {
+                if (savedState === 'true') {
+                    details.setAttribute('open', '');
+                } else {
+                    details.removeAttribute('open');
+                }
+            });
+        }
+    }
+
+    function toggleMetadataState(event) {
+        const isOpen = event.target.hasAttribute('open');
+        localStorage.setItem('metadataExpanded', isOpen);
+
+        // Sync state across all metadata sections
+        document.querySelectorAll('details.metadata-section').forEach(details => {
+            if (isOpen) {
+                details.setAttribute('open', '');
+            } else {
+                details.removeAttribute('open');
+            }
+        });
+    }
+
+    // Watch for dynamically loaded metadata sections
+    const metadataObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    const metadataDetails = node.querySelector('details.metadata-section');
+                    if (metadataDetails) {
+                        const savedState = localStorage.getItem('metadataExpanded');
+                        // Only apply saved state if it exists
+                        if (savedState !== null) {
+                            if (savedState === 'true') {
+                                metadataDetails.setAttribute('open', '');
+                            } else {
+                                metadataDetails.removeAttribute('open');
+                            }
+                        }
+                        metadataDetails.addEventListener('toggle', toggleMetadataState);
+                    }
+                }
+            });
+        });
+    });
+
+    // Start observing when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        initMetadataState();
+        metadataObserver.observe(document.body, { childList: true, subtree: true });
+
+        // Add event listeners to existing metadata sections
+        document.querySelectorAll('details.metadata-section').forEach(details => {
+            details.addEventListener('toggle', toggleMetadataState);
+        });
+    });
+
     // Image gallery handlers
     document.addEventListener('delete-successful', function(event) {
         // Get the current active slide index before removal
@@ -456,6 +519,7 @@ async def get(session, gallery_path: str, resize_width: int = None):
                         *metadata_components,
                         style="padding: 10px; border-radius: 5px; margin-top: 10px;",
                     ),
+                    cls="metadata-section",
                     style="margin-top: 10px;",
                 )
             )
