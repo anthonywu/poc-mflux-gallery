@@ -39,6 +39,38 @@ jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
 custom_handlers = Script(
     """
+    // Dark mode handling
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        updateThemeToggleIcon();
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeToggleIcon();
+    }
+
+    function updateThemeToggleIcon() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                      (!document.documentElement.getAttribute('data-theme') &&
+                       window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const btn = document.querySelector('.theme-toggle');
+        if (btn) {
+            btn.textContent = isDark ? '☀️' : '🌙';
+        }
+    }
+
+    // Initialize theme on load
+    document.addEventListener('DOMContentLoaded', initTheme);
+
+    // Image gallery handlers
     document.addEventListener('delete-successful', function(event) {
         // Get the current active slide index before removal
         const swiper = $("swiper-container")[0].swiper;
@@ -86,6 +118,146 @@ custom_handlers = Script(
 
 custom_css = Style(
     """
+    /* CSS Variables for Design System */
+    :root {
+        /* Light mode colors */
+        --bg-primary: #ffffff;
+        --bg-secondary: #f5f5f5;
+        --bg-tertiary: #e9ecef;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --text-tertiary: #adb5bd;
+        --border-color: #dee2e6;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+
+        /* Spacing system (8px base) */
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+
+        /* Transitions */
+        --transition-fast: 150ms ease;
+        --transition-normal: 250ms ease;
+        --transition-slow: 350ms ease;
+    }
+
+    /* Dark mode colors */
+    [data-theme="dark"] {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --bg-tertiary: #3d3d3d;
+        --text-primary: #f8f9fa;
+        --text-secondary: #adb5bd;
+        --text-tertiary: #6c757d;
+        --border-color: #495057;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+    }
+
+    /* Auto-detect system preference */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --text-tertiary: #6c757d;
+            --border-color: #495057;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+        }
+    }
+
+    /* Apply theme colors */
+    body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+
+    nav {
+        background-color: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-normal);
+    }
+
+    details {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+        transition: all var(--transition-normal);
+    }
+
+    details summary {
+        color: var(--text-primary);
+        transition: color var(--transition-normal);
+    }
+
+    code {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-normal);
+    }
+
+    button {
+        transition: all var(--transition-fast);
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Dark mode toggle button */
+    .theme-toggle {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 1.2em;
+        padding: var(--space-sm);
+        border-radius: 4px;
+        transition: all var(--transition-fast);
+    }
+
+    .theme-toggle:hover {
+        background-color: var(--bg-tertiary);
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Swiper adjustments for dark mode */
+    .swiper-slide {
+        background-color: var(--bg-primary);
+    }
+
+    /* Footer adjustments */
+    footer {
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        padding: var(--space-lg);
+        transition: all var(--transition-normal);
+    }
+
+    /* Metadata section styling */
+    details[open] > div {
+        animation: fadeIn var(--transition-normal);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile responsiveness */
     @media only screen and (max-width:393px) {
         button.show-in-finder {
             display: none;
@@ -93,6 +265,14 @@ custom_css = Style(
         div#keyboard-controls {
             display: none;
         }
+    }
+
+    /* Focus states for accessibility */
+    button:focus-visible,
+    a:focus-visible,
+    select:focus-visible {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: 2px;
     }
     """
 )
@@ -187,7 +367,11 @@ def get_page_images(sort_order="newest", resize_width=None):
                                 type="hidden", name="gallery_path", value=gallery_path
                             ),
                             Input(type="hidden", name="action", value="delete"),
-                            Input(type="hidden", name="slide_delete_index", value=str(count)),
+                            Input(
+                                type="hidden",
+                                name="slide_delete_index",
+                                value=str(count),
+                            ),
                             hx_swap="outerHTML",
                             hx_target=f"#slide-{count}",
                         ),
@@ -355,10 +539,21 @@ def _gallery_page(
                         ),
                     ),
                 ),
+                Li()(
+                    Button(
+                        "🌙",
+                        cls="theme-toggle",
+                        onclick="toggleTheme()",
+                        title="Toggle dark/light mode",
+                    )
+                ),
             )
         ),
         Swiper_Container(
-            *[Swiper_Slide(elem, lazy=True, id=f"slide-{i}") for i, elem in enumerate(img_elems, 1)],
+            *[
+                Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
+                for i, elem in enumerate(img_elems, 1)
+            ],
             # https://swiperjs.com/swiper-api#parameters
             keyboard_enabled=True,
             lazy_preload_prev_next=True,
