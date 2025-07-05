@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import time
@@ -94,6 +95,19 @@ def get_created_recency_description(path_st_mtime):
         return f"{diff_secs / 3_600:,.0f} hours ago"
     else:
         return f"{diff_secs / 86_400:,.0f} days ago"
+
+
+def get_image_metadata(img_path):
+    """Load JSON metadata for an image if it exists."""
+    json_path = img_path.with_suffix(".json")
+    if json_path.exists():
+        try:
+            with open(json_path, "r") as f:
+                data = json.load(f)
+                return data
+        except (json.JSONDecodeError, IOError):
+            return None
+    return None
 
 
 def get_page_images(sort_order="newest", resize_width=None):
@@ -199,16 +213,52 @@ async def get(session, gallery_path: str, resize_width: int = None):
         data_uri_src = await app_gallery.get_image_as_base64(
             gallery_path, resize_max_width=resize_width
         )
-        return Div(
-            cls="swiper-zoom-container",
-            style="width: 100%; display: flex; justify-content: center;",
-        )(
-            Img(
-                src=f"{data_uri_src}",
-                style="height: auto; width: auto; max-width: 100%;",
-                cls="swiper-zoom-target",
+
+        # Load metadata if available
+        img_path = GALLERY_DIR / gallery_path
+        metadata = get_image_metadata(img_path)
+
+        # Build the image display components
+        components = [
+            Div(
+                cls="swiper-zoom-container",
+                style="width: 100%; display: flex; justify-content: center;",
+            )(
+                Img(
+                    src=f"{data_uri_src}",
+                    style="height: auto; width: auto; max-width: 100%;",
+                    cls="swiper-zoom-target",
+                )
             )
-        )
+        ]
+
+        # Add metadata display if available
+        if metadata:
+            metadata_components = [
+                Div(
+                    Strong("Guidance: "),
+                    Code(
+                        metadata.get("guidance", "n/a"), style="white-space: pre-wrap;"
+                    ),
+                    Strong("Steps: "),
+                    Code(metadata.get("steps", "n/a"), style="white-space: pre-wrap;"),
+                    style="margin-top: 10px;",
+                ),
+                Div(
+                    Strong("Prompt: "),
+                    Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
+                    style="margin-top: 10px;",
+                ),
+            ]
+
+            components.append(
+                Div(
+                    *metadata_components,
+                    style="padding: 10px; border-radius: 5px; margin-top: 10px;",
+                )
+            )
+
+        return Div(*components)
     except FileNotFoundError:
         return P(
             f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
@@ -271,7 +321,9 @@ def _gallery_page(
                 Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
                 Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
                 Li()(
-                    Label("Max Width: ", For="resize-select", style="margin-right: 5px;"),
+                    Label(
+                        "Max Width: ", For="resize-select", style="margin-right: 5px;"
+                    ),
                     Select(
                         id="resize-select",
                         name="resize_width",
@@ -280,7 +332,9 @@ def _gallery_page(
                         Option("256px", value="256", selected=(current_resize == 256)),
                         Option("512px", value="512", selected=(current_resize == 512)),
                         Option("768px", value="768", selected=(current_resize == 768)),
-                        Option("1024px", value="1024", selected=(current_resize == 1024)),
+                        Option(
+                            "1024px", value="1024", selected=(current_resize == 1024)
+                        ),
                     ),
                 ),
             )
