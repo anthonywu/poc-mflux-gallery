@@ -151,11 +151,19 @@ custom_handlers = Script(
 
         // Remove the slide from Swiper after a brief delay to ensure DOM update
         setTimeout(function() {
+            // Store whether we're at the last slide before removal
+            const isLastSlide = activeIndex === slidesCount - 1;
+
+            // Remove the slide
             swiper.removeSlide(activeIndex);
 
-            // If we deleted the last slide, go to the previous one
-            if (activeIndex >= slidesCount - 1 && activeIndex > 0) {
-                swiper.slideNext();
+            // After removing a slide:
+            // - If we were at the last slide, we're now at the new last slide (no action needed)
+            // - If we weren't at the last slide, we need to stay at the same index (which now shows the next image)
+            // Swiper automatically handles this, but we need to ensure the active slide is visible
+            if (!isLastSlide) {
+                // Force update to ensure the slide is properly displayed
+                swiper.slideTo(activeIndex, 0);
             }
         }, 100);
     });
