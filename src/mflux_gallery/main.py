@@ -140,6 +140,15 @@ custom_handlers = Script(
         const activeIndex = swiper.activeIndex;
         const slidesCount = swiper.slides.length;
 
+        // Clear loading state on delete button before slide removal
+        const activeSlide = document.querySelector('.swiper-slide-active');
+        if (activeSlide) {
+            const deleteButton = activeSlide.querySelector('button.delete-image');
+            if (deleteButton) {
+                setButtonLoading(deleteButton, false);
+            }
+        }
+
         // Remove the slide from Swiper after a brief delay to ensure DOM update
         setTimeout(function() {
             swiper.removeSlide(activeIndex);
@@ -149,6 +158,61 @@ custom_handlers = Script(
                 swiper.slideNext();
             }
         }, 100);
+    });
+
+    // Button loading state handling
+    function setButtonLoading(button, isLoading) {
+        if (isLoading) {
+            button.classList.add('loading');
+            button.disabled = true;
+        } else {
+            button.classList.remove('loading');
+            button.disabled = false;
+        }
+    }
+
+    function showButtonFeedback(button, type, duration = 1500) {
+        button.classList.remove('loading');
+        button.classList.add(type);
+        setTimeout(() => {
+            button.classList.remove(type);
+            button.disabled = false;
+        }, duration);
+    }
+
+    // Intercept form submissions for loading states
+    document.addEventListener('submit', function(event) {
+        const form = event.target;
+        const button = form.querySelector('button[type="submit"]');
+
+        if (button && (button.classList.contains('delete-image') || button.classList.contains('show-in-finder'))) {
+            setButtonLoading(button, true);
+
+            // For delete action, add optimistic animation
+            if (button.classList.contains('delete-image')) {
+                const slide = button.closest('.swiper-slide');
+                if (slide) {
+                    slide.classList.add('deleting');
+                }
+            }
+        }
+    });
+
+    // Handle successful actions
+    document.addEventListener('htmx:afterRequest', function(event) {
+        const button = event.detail.elt.querySelector('button[type="submit"]');
+        if (button) {
+            if (event.detail.successful) {
+                if (button.classList.contains('show-in-finder')) {
+                    showButtonFeedback(button, 'success');
+                } else if (button.classList.contains('delete-image')) {
+                    // Delete is successful, but button will be removed with the slide
+                    setButtonLoading(button, false);
+                }
+            } else {
+                showButtonFeedback(button, 'error');
+            }
+        }
     });
 
     document.addEventListener('keydown', function(event) {
@@ -352,6 +416,59 @@ custom_css = Style(
     select:focus-visible {
         outline: 2px solid var(--text-secondary);
         outline-offset: 2px;
+    }
+
+    /* Button loading states */
+    button.loading {
+        position: relative;
+        color: transparent !important;
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    button.loading::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid var(--text-secondary);
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spinner 0.6s linear infinite;
+    }
+
+    @keyframes spinner {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Optimistic delete animation */
+    .swiper-slide.deleting {
+        animation: fadeOutScale var(--transition-normal) forwards;
+    }
+
+    @keyframes fadeOutScale {
+        to {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+    }
+
+    /* Success feedback */
+    button.success {
+        background-color: #28a745 !important;
+        color: white !important;
+        transition: background-color var(--transition-fast);
+    }
+
+    /* Error feedback */
+    button.error {
+        background-color: #dc3545 !important;
+        color: white !important;
+        transition: background-color var(--transition-fast);
     }
     """
 )
