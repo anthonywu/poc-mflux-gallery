@@ -596,9 +596,9 @@ def _gallery_page(
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return Title(GALLERY_DIR), Div(
+        Div()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
         Nav()(
             Ul()(
-                Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
                 Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
                 Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
                 Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
