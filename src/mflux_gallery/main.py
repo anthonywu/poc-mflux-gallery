@@ -266,9 +266,13 @@ async def get(session, gallery_path: str, resize_width: int = None):
             ]
 
             components.append(
-                Div(
-                    *metadata_components,
-                    style="padding: 10px; border-radius: 5px; margin-top: 10px;",
+                Details(
+                    Summary("📋 Metadata", style="cursor: pointer; font-weight: bold;"),
+                    Div(
+                        *metadata_components,
+                        style="padding: 10px; border-radius: 5px; margin-top: 10px;",
+                    ),
+                    style="margin-top: 10px;",
                 )
             )
 
