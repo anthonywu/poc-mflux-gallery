@@ -176,6 +176,22 @@ custom_handlers = Script(
             $("swiper-container")[0].swiper.slidePrev();
         }
     });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'm' || event.key === 'M') {
+            event.preventDefault();
+            // Toggle the metadata in the active slide
+            const activeSlide = document.querySelector('.swiper-slide-active');
+            if (activeSlide) {
+                const metadataSection = activeSlide.querySelector('details.metadata-section');
+                if (metadataSection) {
+                    // Simulate a click on the details element to trigger the toggle event
+                    metadataSection.open = !metadataSection.open;
+                    metadataSection.dispatchEvent(new Event('toggle'));
+                }
+            }
+        }
+    });
     """
 )
 
@@ -632,8 +648,11 @@ def _gallery_page(
             Div(id="keyboard-controls")(
                 H4("Keyboard Controls: "),
                 Ul(
+                    Li(Kbd("n"), Span("Next image")),
+                    Li(Kbd("p"), Span("Previous image")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
                     Li(Kbd("f"), Span("Show in Finder")),
+                    Li(Kbd("m"), Span("Toggle metadata visibility")),
                 ),
             )
         ),
