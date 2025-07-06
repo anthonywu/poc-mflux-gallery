@@ -39,21 +39,188 @@ jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
 custom_handlers = Script(
     """
+    // Dark mode handling
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        updateThemeToggleIcon();
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeToggleIcon();
+    }
+
+    function updateThemeToggleIcon() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                      (!document.documentElement.getAttribute('data-theme') &&
+                       window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const btn = document.querySelector('.theme-toggle');
+        if (btn) {
+            btn.textContent = isDark ? '☀️' : '🌙';
+        }
+    }
+
+    // Initialize theme on load
+    document.addEventListener('DOMContentLoaded', initTheme);
+
+    // Metadata expansion state handling
+    function initMetadataState() {
+        const savedState = localStorage.getItem('metadataExpanded');
+        // Only apply saved state if it exists (respecting default collapsed state)
+        if (savedState !== null) {
+            document.querySelectorAll('details.metadata-section').forEach(details => {
+                if (savedState === 'true') {
+                    details.setAttribute('open', '');
+                } else {
+                    details.removeAttribute('open');
+                }
+            });
+        }
+    }
+
+    function toggleMetadataState(event) {
+        const isOpen = event.target.hasAttribute('open');
+        localStorage.setItem('metadataExpanded', isOpen);
+
+        // Sync state across all metadata sections
+        document.querySelectorAll('details.metadata-section').forEach(details => {
+            if (isOpen) {
+                details.setAttribute('open', '');
+            } else {
+                details.removeAttribute('open');
+            }
+        });
+    }
+
+    // Watch for dynamically loaded metadata sections
+    const metadataObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) { // Element node
+                    const metadataDetails = node.querySelector('details.metadata-section');
+                    if (metadataDetails) {
+                        const savedState = localStorage.getItem('metadataExpanded');
+                        // Only apply saved state if it exists
+                        if (savedState !== null) {
+                            if (savedState === 'true') {
+                                metadataDetails.setAttribute('open', '');
+                            } else {
+                                metadataDetails.removeAttribute('open');
+                            }
+                        }
+                        metadataDetails.addEventListener('toggle', toggleMetadataState);
+                    }
+                }
+            });
+        });
+    });
+
+    // Start observing when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        initMetadataState();
+        metadataObserver.observe(document.body, { childList: true, subtree: true });
+
+        // Add event listeners to existing metadata sections
+        document.querySelectorAll('details.metadata-section').forEach(details => {
+            details.addEventListener('toggle', toggleMetadataState);
+        });
+    });
+
+    // Image gallery handlers
     document.addEventListener('delete-successful', function(event) {
         // Get the current active slide index before removal
         const swiper = $("swiper-container")[0].swiper;
         const activeIndex = swiper.activeIndex;
         const slidesCount = swiper.slides.length;
 
+        // Clear loading state on delete button before slide removal
+        const activeSlide = document.querySelector('.swiper-slide-active');
+        if (activeSlide) {
+            const deleteButton = activeSlide.querySelector('button.delete-image');
+            if (deleteButton) {
+                setButtonLoading(deleteButton, false);
+            }
+        }
+
         // Remove the slide from Swiper after a brief delay to ensure DOM update
         setTimeout(function() {
+            // Store whether we're at the last slide before removal
+            const isLastSlide = activeIndex === slidesCount - 1;
+
+            // Remove the slide
             swiper.removeSlide(activeIndex);
 
-            // If we deleted the last slide, go to the previous one
-            if (activeIndex >= slidesCount - 1 && activeIndex > 0) {
-                swiper.slideNext();
+            // After removing a slide:
+            // - If we were at the last slide, we're now at the new last slide (no action needed)
+            // - If we weren't at the last slide, we need to stay at the same index (which now shows the next image)
+            // Swiper automatically handles this, but we need to ensure the active slide is visible
+            if (!isLastSlide) {
+                // Force update to ensure the slide is properly displayed
+                swiper.slideTo(activeIndex, 0);
             }
         }, 100);
+    });
+
+    // Button loading state handling
+    function setButtonLoading(button, isLoading) {
+        if (isLoading) {
+            button.classList.add('loading');
+            button.disabled = true;
+        } else {
+            button.classList.remove('loading');
+            button.disabled = false;
+        }
+    }
+
+    function showButtonFeedback(button, type, duration = 1500) {
+        button.classList.remove('loading');
+        button.classList.add(type);
+        setTimeout(() => {
+            button.classList.remove(type);
+            button.disabled = false;
+        }, duration);
+    }
+
+    // Intercept form submissions for loading states
+    document.addEventListener('submit', function(event) {
+        const form = event.target;
+        const button = form.querySelector('button[type="submit"]');
+
+        if (button && (button.classList.contains('delete-image') || button.classList.contains('show-in-finder'))) {
+            setButtonLoading(button, true);
+
+            // For delete action, add optimistic animation
+            if (button.classList.contains('delete-image')) {
+                const slide = button.closest('.swiper-slide');
+                if (slide) {
+                    slide.classList.add('deleting');
+                }
+            }
+        }
+    });
+
+    // Handle successful actions
+    document.addEventListener('htmx:afterRequest', function(event) {
+        const button = event.detail.elt.querySelector('button[type="submit"]');
+        if (button) {
+            if (event.detail.successful) {
+                if (button.classList.contains('show-in-finder')) {
+                    showButtonFeedback(button, 'success');
+                } else if (button.classList.contains('delete-image')) {
+                    // Delete is successful, but button will be removed with the slide
+                    setButtonLoading(button, false);
+                }
+            } else {
+                showButtonFeedback(button, 'error');
+            }
+        }
     });
 
     document.addEventListener('keydown', function(event) {
@@ -81,11 +248,167 @@ custom_handlers = Script(
             $("swiper-container")[0].swiper.slidePrev();
         }
     });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'm' || event.key === 'M') {
+            event.preventDefault();
+            // Toggle the metadata in the active slide
+            const activeSlide = document.querySelector('.swiper-slide-active');
+            if (activeSlide) {
+                const metadataSection = activeSlide.querySelector('details.metadata-section');
+                if (metadataSection) {
+                    // Simulate a click on the details element to trigger the toggle event
+                    metadataSection.open = !metadataSection.open;
+                    metadataSection.dispatchEvent(new Event('toggle'));
+                }
+            }
+        }
+    });
     """
 )
 
 custom_css = Style(
     """
+    /* CSS Variables for Design System */
+    :root {
+        /* Light mode colors */
+        --bg-primary: #ffffff;
+        --bg-secondary: #f5f5f5;
+        --bg-tertiary: #e9ecef;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --text-tertiary: #adb5bd;
+        --border-color: #dee2e6;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+
+        /* Spacing system (8px base) */
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+
+        /* Transitions */
+        --transition-fast: 150ms ease;
+        --transition-normal: 250ms ease;
+        --transition-slow: 350ms ease;
+    }
+
+    /* Dark mode colors */
+    [data-theme="dark"] {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --bg-tertiary: #3d3d3d;
+        --text-primary: #f8f9fa;
+        --text-secondary: #adb5bd;
+        --text-tertiary: #6c757d;
+        --border-color: #495057;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+    }
+
+    /* Auto-detect system preference */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --text-tertiary: #6c757d;
+            --border-color: #495057;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+        }
+    }
+
+    /* Apply theme colors */
+    body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+
+    nav {
+        background-color: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-normal);
+    }
+
+    details {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+        transition: all var(--transition-normal);
+    }
+
+    details summary {
+        color: var(--text-primary);
+        transition: color var(--transition-normal);
+    }
+
+    code {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-normal);
+    }
+
+    button {
+        transition: all var(--transition-fast);
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Dark mode toggle button */
+    .theme-toggle {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 1.2em;
+        padding: var(--space-sm);
+        border-radius: 4px;
+        transition: all var(--transition-fast);
+    }
+
+    .theme-toggle:hover {
+        background-color: var(--bg-tertiary);
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Swiper adjustments for dark mode */
+    .swiper-slide {
+        background-color: var(--bg-primary);
+    }
+
+    /* Footer adjustments */
+    footer {
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        padding: var(--space-lg);
+        transition: all var(--transition-normal);
+    }
+
+    /* Metadata section styling */
+    details[open] > div {
+        animation: fadeIn var(--transition-normal);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile responsiveness */
     @media only screen and (max-width:393px) {
         button.show-in-finder {
             display: none;
@@ -93,6 +416,67 @@ custom_css = Style(
         div#keyboard-controls {
             display: none;
         }
+    }
+
+    /* Focus states for accessibility */
+    button:focus-visible,
+    a:focus-visible,
+    select:focus-visible {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: 2px;
+    }
+
+    /* Button loading states */
+    button.loading {
+        position: relative;
+        color: transparent !important;
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    button.loading::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid var(--text-secondary);
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spinner 0.6s linear infinite;
+    }
+
+    @keyframes spinner {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Optimistic delete animation */
+    .swiper-slide.deleting {
+        animation: fadeOutScale var(--transition-normal) forwards;
+    }
+
+    @keyframes fadeOutScale {
+        to {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+    }
+
+    /* Success feedback */
+    button.success {
+        background-color: #28a745 !important;
+        color: white !important;
+        transition: background-color var(--transition-fast);
+    }
+
+    /* Error feedback */
+    button.error {
+        background-color: #dc3545 !important;
+        color: white !important;
+        transition: background-color var(--transition-fast);
     }
     """
 )
@@ -187,7 +571,11 @@ def get_page_images(sort_order="newest", resize_width=None):
                                 type="hidden", name="gallery_path", value=gallery_path
                             ),
                             Input(type="hidden", name="action", value="delete"),
-                            Input(type="hidden", name="slide_delete_index", value=str(count)),
+                            Input(
+                                type="hidden",
+                                name="slide_delete_index",
+                                value=str(count),
+                            ),
                             hx_swap="outerHTML",
                             hx_target=f"#slide-{count}",
                         ),
@@ -250,15 +638,6 @@ async def get(session, gallery_path: str, resize_width: int = None):
         if metadata:
             metadata_components = [
                 Div(
-                    Strong("Guidance: "),
-                    Code(
-                        metadata.get("guidance", "n/a"), style="white-space: pre-wrap;"
-                    ),
-                    Strong("Steps: "),
-                    Code(metadata.get("steps", "n/a"), style="white-space: pre-wrap;"),
-                    style="margin-top: 10px;",
-                ),
-                Div(
                     Strong("Prompt: "),
                     Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
                     style="margin-top: 10px;",
@@ -267,11 +646,21 @@ async def get(session, gallery_path: str, resize_width: int = None):
 
             components.append(
                 Details(
-                    Summary("📋 Metadata", style="cursor: pointer; font-weight: bold;"),
+                    Summary(
+                        "📋 Metadata (",
+                        Strong("Guidance: "),
+                        metadata.get("guidance", "n/a"),
+                        " / ",
+                        Strong("Steps: "),
+                        metadata.get("steps", "n/a"),
+                        ")",
+                        style="cursor: pointer; font-weight: bold;",
+                    ),
                     Div(
                         *metadata_components,
                         style="padding: 10px; border-radius: 5px; margin-top: 10px;",
                     ),
+                    cls="metadata-section",
                     style="margin-top: 10px;",
                 )
             )
@@ -332,9 +721,9 @@ def _gallery_page(
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return Title(GALLERY_DIR), Div(
+        Div()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
         Nav()(
             Ul()(
-                Li()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
                 Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
                 Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
                 Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
@@ -355,10 +744,21 @@ def _gallery_page(
                         ),
                     ),
                 ),
+                Li()(
+                    Button(
+                        "🌙",
+                        cls="theme-toggle",
+                        onclick="toggleTheme()",
+                        title="Toggle dark/light mode",
+                    )
+                ),
             )
         ),
         Swiper_Container(
-            *[Swiper_Slide(elem, lazy=True, id=f"slide-{i}") for i, elem in enumerate(img_elems, 1)],
+            *[
+                Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
+                for i, elem in enumerate(img_elems, 1)
+            ],
             # https://swiperjs.com/swiper-api#parameters
             keyboard_enabled=True,
             lazy_preload_prev_next=True,
@@ -373,8 +773,11 @@ def _gallery_page(
             Div(id="keyboard-controls")(
                 H4("Keyboard Controls: "),
                 Ul(
+                    Li(Kbd("n"), Span("Next image")),
+                    Li(Kbd("p"), Span("Previous image")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
                     Li(Kbd("f"), Span("Show in Finder")),
+                    Li(Kbd("m"), Span("Toggle metadata visibility")),
                 ),
             )
         ),
