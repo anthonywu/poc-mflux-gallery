@@ -638,15 +638,6 @@ async def get(session, gallery_path: str, resize_width: int = None):
         if metadata:
             metadata_components = [
                 Div(
-                    Strong("Guidance: "),
-                    Code(
-                        metadata.get("guidance", "n/a"), style="white-space: pre-wrap;"
-                    ),
-                    Strong("Steps: "),
-                    Code(metadata.get("steps", "n/a"), style="white-space: pre-wrap;"),
-                    style="margin-top: 10px;",
-                ),
-                Div(
                     Strong("Prompt: "),
                     Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
                     style="margin-top: 10px;",
@@ -655,7 +646,16 @@ async def get(session, gallery_path: str, resize_width: int = None):
 
             components.append(
                 Details(
-                    Summary("📋 Metadata", style="cursor: pointer; font-weight: bold;"),
+                    Summary(
+                        "📋 Metadata (",
+                        Strong("Guidance: "),
+                        metadata.get("guidance", "n/a"),
+                        " / ",
+                        Strong("Steps: "),
+                        metadata.get("steps", "n/a"),
+                        ")",
+                        style="cursor: pointer; font-weight: bold;",
+                    ),
                     Div(
                         *metadata_components,
                         style="padding: 10px; border-radius: 5px; margin-top: 10px;",
