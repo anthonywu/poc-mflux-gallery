@@ -284,6 +284,16 @@ custom_handlers = Script(
     });
 
     document.addEventListener('keydown', function(event) {
+        if (event.key === 'h') {
+            event.preventDefault();
+            const keyboardControls = document.getElementById('keyboard-controls');
+            if (keyboardControls) {
+                keyboardControls.open = !keyboardControls.open;
+            }
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
         if (event.key === 'm' || event.key === 'M') {
             event.preventDefault();
             // Toggle the metadata in the active slide
@@ -596,10 +606,12 @@ def get_page_images(sort_order="newest", resize_width=None):
                     hx_vals=hx_vals,
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
                 )(Span(aria_busy=True)(f"Loading {gallery_path}")),
+                Div(
+                    P(f"📂 {gallery_path}"),
+                ),
                 Div(cls="grid image-actions", style="margin-top: 10px;")(
                     Div(),  # empty filler
                     Div(
-                        P(f"📂 {gallery_path}"),
                         Form(hx_post="/image_action")(
                             Button(
                                 "🔍 Show in Finder ",
@@ -836,19 +848,21 @@ def _gallery_page(
             zoom=True,
         ),
         Footer(
-            Div(id="keyboard-controls")(
-                H4("Keyboard Controls: "),
-                Ul(
-                    Li(Kbd("n"), Span("Next image")),
-                    Li(Kbd("p"), Span("Previous image")),
-                    Li(Kbd("j"), Span("Jump back 10 slides")),
-                    Li(Kbd("k"), Span("Jump forward 10 slides")),
-                    Li(Kbd("a"), Span("Go to first slide")),
-                    Li(Kbd("e"), Span("Go to last slide")),
-                    Li(Kbd("d"), Span("Delete image and advance slide")),
-                    Li(Kbd("f"), Span("Show in Finder")),
-                    Li(Kbd("m"), Span("Toggle metadata visibility")),
-                ),
+            Details(id="keyboard-controls")(
+                Summary(H4("Keyboard Controls ('h' to toggle)")),
+                Div(id="keyboard-controls-hotkey-list")(
+                    Ul(
+                        Li(Kbd("n"), Span("Next image")),
+                        Li(Kbd("p"), Span("Previous image")),
+                        Li(Kbd("j"), Span("Jump back 10 slides")),
+                        Li(Kbd("k"), Span("Jump forward 10 slides")),
+                        Li(Kbd("a"), Span("Go to first slide")),
+                        Li(Kbd("e"), Span("Go to last slide")),
+                        Li(Kbd("d"), Span("Delete image and advance slide")),
+                        Li(Kbd("f"), Span("Show in Finder")),
+                        Li(Kbd("m"), Span("Toggle metadata visibility")),
+                    ),
+                )
             )
         ),
     )
