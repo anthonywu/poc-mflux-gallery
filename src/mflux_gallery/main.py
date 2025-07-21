@@ -586,9 +586,8 @@ def get_page_images(sort_order="newest", resize_width=None):
         tags.append(
             Details(
                 Summary(
-                    Mark(Small(f"{count} / {len(matches)} 📂 {gallery_path}")),
+                    Mark(Small(f"{count} / of batch size {args.load_limit} / total: {len(matches)}")),
                     Small(get_created_recency_description(img_path.stat().st_mtime)),
-                    Progress(value=count, max=len(matches)),
                 ),
                 Div(
                     id=f"lazy-image-{count}",
@@ -600,6 +599,7 @@ def get_page_images(sort_order="newest", resize_width=None):
                 Div(cls="grid image-actions", style="margin-top: 10px;")(
                     Div(),  # empty filler
                     Div(
+                        P(f"📂 {gallery_path}"),
                         Form(hx_post="/image_action")(
                             Button(
                                 "🔍 Show in Finder ",
@@ -752,10 +752,10 @@ async def post(session, action: str, gallery_path: str):
             else:
                 notif = f"Does not exist: {target.as_posix()!r}"
                 log_notif(session, notif, typ="warning")
-            
+
             # Count remaining images (actual total, not load-limited)
             remaining_images = app_gallery.count_all_images()
-            
+
             # Return empty response with trigger for slide removal, plus updated counter via OOB
             return (
                 Sup(remaining_images, id="photo-counter", hx_swap_oob="true"),
