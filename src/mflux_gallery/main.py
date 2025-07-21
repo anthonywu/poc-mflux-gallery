@@ -250,6 +250,40 @@ custom_handlers = Script(
     });
 
     document.addEventListener('keydown', function(event) {
+        if (event.key === 'j') {
+            event.preventDefault();
+            const swiper = $("swiper-container")[0].swiper;
+            const targetIndex = Math.max(0, swiper.activeIndex - 10);
+            swiper.slideTo(targetIndex);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'k') {
+            event.preventDefault();
+            const swiper = $("swiper-container")[0].swiper;
+            const targetIndex = Math.min(swiper.slides.length - 1, swiper.activeIndex + 10);
+            swiper.slideTo(targetIndex);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'a') {
+            event.preventDefault();
+            const swiper = $("swiper-container")[0].swiper;
+            swiper.slideTo(0);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'e') {
+            event.preventDefault();
+            const swiper = $("swiper-container")[0].swiper;
+            swiper.slideTo(swiper.slides.length - 1);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
         if (event.key === 'm' || event.key === 'M') {
             event.preventDefault();
             // Toggle the metadata in the active slide
@@ -807,6 +841,10 @@ def _gallery_page(
                 Ul(
                     Li(Kbd("n"), Span("Next image")),
                     Li(Kbd("p"), Span("Previous image")),
+                    Li(Kbd("j"), Span("Jump back 10 slides")),
+                    Li(Kbd("k"), Span("Jump forward 10 slides")),
+                    Li(Kbd("a"), Span("Go to first slide")),
+                    Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
                     Li(Kbd("f"), Span("Show in Finder")),
                     Li(Kbd("m"), Span("Toggle metadata visibility")),
