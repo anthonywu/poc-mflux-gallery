@@ -1,6 +1,7 @@
 import base64
 import io
 import subprocess
+import time
 from pathlib import Path
 
 from PIL import Image
@@ -27,6 +28,9 @@ class Gallery:
         self.photo_suffixes = photo_suffixes
         self.resize_max_width = resize_max_width
         self.load_limit = load_limit
+        self._count_cache = None
+        self._count_cache_time = 0
+        self._cache_duration = 60  # Cache for 1 minute
 
     def __iter__(self) -> Path:
         count = 0
@@ -35,6 +39,32 @@ class Gallery:
                 if count <= self.load_limit:
                     yield _
                 count += 1
+
+    def count_all_images(self) -> int:
+        """Count all images in the gallery without load limit. Results are cached for 1 minute."""
+        current_time = time.monotonic()
+
+        # Check if cache is still valid
+        if (self._count_cache is not None and
+            current_time - self._count_cache_time < self._cache_duration):
+            return self._count_cache
+
+        # Recount images
+        total = 0
+        print("Recounting images...")
+        for suf in self.photo_suffixes:
+            total += sum(1 for _ in self.gallery_dir.rglob(f"*{suf}", case_sensitive=False))
+
+        # Update cache
+        self._count_cache = total
+        self._count_cache_time = current_time
+
+        return total
+
+    def invalidate_count_cache(self):
+        """Invalidate the count cache, forcing a recount on next access."""
+        self._count_cache = None
+        self._count_cache_time = 0
 
     async def get_image_as_base64(
         self, gallery_path, format="PNG", resize_max_width: int = None
@@ -78,6 +108,11 @@ class Gallery:
                     target_suf = target.with_suffix(suf)
                     if target_suf.exists():
                         target_suf.unlink()
+            # Decrement cache if valid, otherwise invalidate
+            if self._count_cache is not None:
+                self._count_cache -= 1
+            else:
+                self.invalidate_count_cache()
             return target, True
         else:
             return target, False

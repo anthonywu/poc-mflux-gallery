@@ -718,7 +718,15 @@ async def post(session, action: str, gallery_path: str):
             else:
                 notif = f"Does not exist: {target.as_posix()!r}"
                 log_notif(session, notif, typ="warning")
-            return Response(""), HtmxResponseHeaders(trigger="delete-successful")
+            
+            # Count remaining images (actual total, not load-limited)
+            remaining_images = app_gallery.count_all_images()
+            
+            # Return empty response with trigger for slide removal, plus updated counter via OOB
+            return (
+                Sup(remaining_images, id="photo-counter", hx_swap_oob="true"),
+                HtmxResponseHeaders(trigger="delete-successful")
+            )
         elif action == "show-in-finder":
             target, success, error_msg = await app_gallery.show_in_finder(gallery_path)
             if success:
@@ -739,12 +747,13 @@ def _gallery_page(
     mode: t.Literal["default", "shuffled", "oldest"] = "default",
     resize_width: int = None,
 ):
-    num_images = len(img_elems)
+    # Get actual total count of images in gallery
+    total_images = app_gallery.count_all_images()
     # Determine current resize width for dropdown
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return Title(GALLERY_DIR), Div(
-        Div()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(num_images)),
+        Div()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(total_images, id="photo-counter")),
         Nav()(
             Ul()(
                 Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
