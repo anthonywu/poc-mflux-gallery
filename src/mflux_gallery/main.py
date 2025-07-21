@@ -264,6 +264,29 @@ custom_handlers = Script(
             }
         }
     });
+
+    // Resolution switching hotkeys (1-4)
+    document.addEventListener('keydown', function(event) {
+        const resolutionMap = {
+            '1': '256',
+            '2': '512',
+            '3': '768',
+            '4': '1024'
+        };
+
+        if (resolutionMap[event.key]) {
+            event.preventDefault();
+            const newResolution = resolutionMap[event.key];
+            const currentPath = window.location.pathname;
+            const currentSearch = new URLSearchParams(window.location.search);
+
+            // Update the resize_width parameter
+            currentSearch.set('resize_width', newResolution);
+
+            // Navigate to the new URL
+            window.location.href = currentPath + '?' + currentSearch.toString();
+        }
+    });
     """
 )
 
