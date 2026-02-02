@@ -45,15 +45,19 @@ class Gallery:
         current_time = time.monotonic()
 
         # Check if cache is still valid
-        if (self._count_cache is not None and
-            current_time - self._count_cache_time < self._cache_duration):
+        if (
+            self._count_cache is not None
+            and current_time - self._count_cache_time < self._cache_duration
+        ):
             return self._count_cache
 
         # Recount images
         total = 0
         print("Recounting images...")
         for suf in self.photo_suffixes:
-            total += sum(1 for _ in self.gallery_dir.rglob(f"*{suf}", case_sensitive=False))
+            total += sum(
+                1 for _ in self.gallery_dir.rglob(f"*{suf}", case_sensitive=False)
+            )
 
         # Update cache
         self._count_cache = total
@@ -67,7 +71,7 @@ class Gallery:
         self._count_cache_time = 0
 
     async def get_image_as_base64(
-        self, gallery_path, format="PNG", resize_max_width: int = None
+        self, gallery_path, format="WEBP", resize_max_width: int = None
     ) -> str:
         # Use provided resize_max_width or fall back to instance default
         resize_width = (

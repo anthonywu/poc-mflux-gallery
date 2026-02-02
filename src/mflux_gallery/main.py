@@ -135,6 +135,11 @@ custom_handlers = Script(
 
     // Image gallery handlers
     document.addEventListener('delete-successful', function(event) {
+        // Haptic feedback for mobile devices
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+
         // Get the current active slide index before removal
         const swiper = $("swiper-container")[0].swiper;
         const activeIndex = swiper.activeIndex;
@@ -338,14 +343,14 @@ custom_css = Style(
     """
     /* CSS Variables for Design System */
     :root {
-        /* Light mode colors */
+        /* iOS system colors (light mode) */
         --bg-primary: #ffffff;
-        --bg-secondary: #f5f5f5;
-        --bg-tertiary: #e9ecef;
-        --text-primary: #212529;
-        --text-secondary: #6c757d;
-        --text-tertiary: #adb5bd;
-        --border-color: #dee2e6;
+        --bg-secondary: rgba(249, 249, 249, 0.8);
+        --bg-tertiary: rgba(242, 242, 247, 1);
+        --text-primary: #000000;
+        --text-secondary: rgba(60, 60, 67, 0.6);
+        --text-tertiary: rgba(60, 60, 67, 0.3);
+        --border-color: rgba(60, 60, 67, 0.12);
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
         --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
 
@@ -356,21 +361,21 @@ custom_css = Style(
         --space-lg: 24px;
         --space-xl: 32px;
 
-        /* Transitions */
-        --transition-fast: 150ms ease;
-        --transition-normal: 250ms ease;
-        --transition-slow: 350ms ease;
+        /* iOS spring animations */
+        --transition-fast: 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        --transition-normal: 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        --transition-slow: 600ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
-    /* Dark mode colors */
+    /* Dark mode colors (iOS system) */
     [data-theme="dark"] {
-        --bg-primary: #1a1a1a;
-        --bg-secondary: #2d2d2d;
-        --bg-tertiary: #3d3d3d;
-        --text-primary: #f8f9fa;
-        --text-secondary: #adb5bd;
-        --text-tertiary: #6c757d;
-        --border-color: #495057;
+        --bg-primary: #000000;
+        --bg-secondary: rgba(28, 28, 30, 0.8);
+        --bg-tertiary: rgba(44, 44, 46, 1);
+        --text-primary: #ffffff;
+        --text-secondary: rgba(235, 235, 245, 0.6);
+        --text-tertiary: rgba(235, 235, 245, 0.3);
+        --border-color: rgba(84, 84, 88, 0.5);
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
         --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
     }
@@ -378,13 +383,13 @@ custom_css = Style(
     /* Auto-detect system preference */
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #2d2d2d;
-            --bg-tertiary: #3d3d3d;
-            --text-primary: #f8f9fa;
-            --text-secondary: #adb5bd;
-            --text-tertiary: #6c757d;
-            --border-color: #495057;
+            --bg-primary: #000000;
+            --bg-secondary: rgba(28, 28, 30, 0.8);
+            --bg-tertiary: rgba(44, 44, 46, 1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(235, 235, 245, 0.6);
+            --text-tertiary: rgba(235, 235, 245, 0.3);
+            --border-color: rgba(84, 84, 88, 0.5);
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
         }
@@ -395,6 +400,11 @@ custom_css = Style(
         background-color: var(--bg-primary);
         color: var(--text-primary);
         transition: background-color var(--transition-normal), color var(--transition-normal);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     nav {
@@ -402,6 +412,8 @@ custom_css = Style(
         border-bottom: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
         transition: all var(--transition-normal);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
     }
 
     details {
@@ -426,12 +438,20 @@ custom_css = Style(
     }
 
     button {
-        transition: all var(--transition-fast);
+        transition: transform var(--transition-fast);
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
 
     button:hover {
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
+    }
+
+    /* iOS native touch feedback */
+    button:active {
+        transform: scale(0.95);
+        transition: transform 100ms ease;
     }
 
     /* Dark mode toggle button */
@@ -443,13 +463,15 @@ custom_css = Style(
         font-size: 1.2em;
         padding: var(--space-sm);
         border-radius: 4px;
-        transition: all var(--transition-fast);
+        transition: background-color var(--transition-fast);
     }
 
     .theme-toggle:hover {
         background-color: var(--bg-tertiary);
-        transform: none;
-        box-shadow: none;
+    }
+
+    .theme-toggle:active {
+        transform: scale(0.95);
     }
 
     /* Swiper adjustments for dark mode */
@@ -463,6 +485,8 @@ custom_css = Style(
         border-top: 1px solid var(--border-color);
         padding: var(--space-lg);
         transition: all var(--transition-normal);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
     }
 
     /* Metadata section styling */
@@ -483,6 +507,12 @@ custom_css = Style(
         div#keyboard-controls {
             display: none;
         }
+
+        nav select#resize-select {
+            padding: 12px;
+            font-size: 16px;
+            min-width: 120px;
+        }
     }
 
     /* Focus states for accessibility */
@@ -491,6 +521,33 @@ custom_css = Style(
     select:focus-visible {
         outline: 2px solid var(--text-secondary);
         outline-offset: 2px;
+    }
+
+    /* iOS-style select dropdown */
+    select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 8px 32px 8px 12px;
+        font-family: inherit;
+        font-size: 16px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+    }
+
+    select:active {
+        transform: scale(0.98);
+    }
+
+    select:focus {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: -2px;
     }
 
     /* Button loading states */
@@ -545,6 +602,54 @@ custom_css = Style(
         color: white !important;
         transition: background-color var(--transition-fast);
     }
+
+    /* Loading skeleton */
+    .skeleton-loader {
+        width: 100%;
+        height: 300px;
+        background: linear-gradient(90deg,
+            var(--bg-tertiary) 25%,
+            var(--bg-secondary) 50%,
+            var(--bg-tertiary) 75%
+        );
+        background-size: 200% 100%;
+        border-radius: 8px;
+        animation: skeleton-loading 1.5s infinite;
+    }
+
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .skeleton-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-lg);
+        gap: var(--space-md);
+    }
+
+    .skeleton-text {
+        height: 16px;
+        background: var(--bg-tertiary);
+        border-radius: 4px;
+        animation: pulse 1.5s infinite;
+    }
+
+    .skeleton-text.short {
+        width: 60%;
+    }
+
+    .skeleton-text.medium {
+        width: 80%;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
     """
 )
 
@@ -596,7 +701,11 @@ def get_page_images(sort_order="newest", resize_width=None):
         tags.append(
             Details(
                 Summary(
-                    Mark(Small(f"{count} / of batch size {args.load_limit} / total: {len(matches)}")),
+                    Mark(
+                        Small(
+                            f"{count} / of batch size {args.load_limit} / total: {len(matches)}"
+                        )
+                    ),
                     Small(get_created_recency_description(img_path.stat().st_mtime)),
                 ),
                 Div(
@@ -605,7 +714,12 @@ def get_page_images(sort_order="newest", resize_width=None):
                     hx_get="/image_element",
                     hx_vals=hx_vals,
                     hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
-                )(Span(aria_busy=True)(f"Loading {gallery_path}")),
+                )(
+                    Div(cls="skeleton-container")(
+                        Div(cls="skeleton-loader"),
+                        Small(cls="skeleton-text short"),
+                    )
+                ),
                 Div(
                     P(f"📂 {gallery_path}"),
                 ),
@@ -771,7 +885,7 @@ async def post(session, action: str, gallery_path: str):
             # Return empty response with trigger for slide removal, plus updated counter via OOB
             return (
                 Sup(remaining_images, id="photo-counter", hx_swap_oob="true"),
-                HtmxResponseHeaders(trigger="delete-successful")
+                HtmxResponseHeaders(trigger="delete-successful"),
             )
         elif action == "show-in-finder":
             target, success, error_msg = await app_gallery.show_in_finder(gallery_path)
@@ -799,7 +913,10 @@ def _gallery_page(
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return Title(GALLERY_DIR), Div(
-        Div()(Code(GALLERY_DIR, style="font-size: 0.5em;"), Sup(total_images, id="photo-counter")),
+        Div()(
+            Code(GALLERY_DIR, style="font-size: 0.5em;"),
+            Sup(total_images, id="photo-counter"),
+        ),
         Nav()(
             Ul()(
                 Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
@@ -862,7 +979,7 @@ def _gallery_page(
                         Li(Kbd("f"), Span("Show in Finder")),
                         Li(Kbd("m"), Span("Toggle metadata visibility")),
                     ),
-                )
+                ),
             )
         ),
     )
