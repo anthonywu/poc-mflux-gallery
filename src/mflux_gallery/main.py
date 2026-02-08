@@ -515,12 +515,34 @@ custom_css = Style(
         }
     }
 
+    /* Touch device detection - hide keyboard, show mobile controls */
+    @media (hover: none) and (pointer: coarse) {
+        #keyboard-controls {
+            display: none;
+        }
+
+        #mobile-controls {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-top: var(--space-md);
+        }
+    }
+
+    @media (hover: hover) {
+        #mobile-controls {
+            display: none;
+        }
+    }
+
     /* Image path label - prevent overflow */
     .image-path-label {
         word-break: break-all;
         overflow-wrap: break-word;
         max-width: 100%;
         font-size: 0.85em;
+        text-align: center;
+        padding: var(--space-sm) 0;
     }
 
     /* Focus states for accessibility */
@@ -781,6 +803,7 @@ def get_page_images(sort_order="newest", resize_width=None):
 
 app, rt = fast_app(
     hdrs=(
+        Meta(name="format-detection", content="telephone=no"),
         jquery_js,
         swiper_js,
         custom_handlers,
@@ -973,6 +996,20 @@ def _gallery_page(
             zoom=True,
         ),
         Footer(
+            Div(id="mobile-controls")(
+                Button(
+                    "⏪ -10",
+                    onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));",
+                    cls="secondary",
+                    style="min-width: 80px;",
+                ),
+                Button(
+                    "+10 ⏩",
+                    onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));",
+                    cls="secondary",
+                    style="min-width: 80px;",
+                ),
+            ),
             Details(id="keyboard-controls")(
                 Summary(H4("Keyboard Controls ('h' to toggle)")),
                 Div(id="keyboard-controls-hotkey-list")(
@@ -988,7 +1025,7 @@ def _gallery_page(
                         Li(Kbd("m"), Span("Toggle metadata visibility")),
                     ),
                 ),
-            )
+            ),
         ),
     )
 
