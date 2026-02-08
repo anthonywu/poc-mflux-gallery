@@ -515,6 +515,14 @@ custom_css = Style(
         }
     }
 
+    /* Image path label - prevent overflow */
+    .image-path-label {
+        word-break: break-all;
+        overflow-wrap: break-word;
+        max-width: 100%;
+        font-size: 0.85em;
+    }
+
     /* Focus states for accessibility */
     button:focus-visible,
     a:focus-visible,
@@ -721,7 +729,7 @@ def get_page_images(sort_order="newest", resize_width=None):
                     )
                 ),
                 Div(
-                    P(f"📂 {gallery_path}"),
+                    P(f"📂 {gallery_path}", cls="image-path-label"),
                 ),
                 Div(cls="grid image-actions", style="margin-top: 10px;")(
                     Div(),  # empty filler
