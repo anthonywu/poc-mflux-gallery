@@ -433,3 +433,21 @@
     .image-card > summary > small { float: none; display: block; margin-top: 8px; }
   }
 }
+
+@layer styles {
+  .metadata-hint, .metadata-key { color: var(--z-muted-f); font-weight: 400; }
+  .metadata-values { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .metadata-value { padding: 4px 8px; border-radius: 6px; background: var(--gallery-surface); overflow-wrap: anywhere; }
+  .prompt-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .prompt-text { display: block; white-space: pre-wrap; padding: 8px 0 12px; font: inherit; line-height: 1.7; }
+  .focus-mode { --stage-height: calc(100svh - 115px); }
+  .focus-mode .gallery-shell { max-width: none; padding: 8px; }
+  .focus-mode :is(.gallery-heading, nav, footer, .image-card > summary, .image-actions, .image-filename, .metadata-section) { display: none; }
+  .focus-mode .image-card { border: none; padding: 0; }
+  .focus-mode .browse-controls { opacity: .8; }
+  .focus-mode .browse-controls:is(:hover, :focus-within) { opacity: 1; }
+  @media (max-width: 480px) {
+    .browse-controls { flex-wrap: wrap; }
+    .browse-controls [data-action] { font-size: 11px; padding-inline: 8px; }
+  }
+}
