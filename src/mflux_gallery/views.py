@@ -66,7 +66,7 @@ def image_actions(gallery_path: str, count: int) -> FT:
                 Input(type="hidden", name="gallery_path", value=gallery_path),
                 Input(type="hidden", name="action", value="delete"),
                 Input(type="hidden", name="slide_delete_index", value=str(count)),
-                hx_swap="outerHTML",
+                hx_swap="none",
                 hx_target=f"#slide-{count}",
             )
         ),

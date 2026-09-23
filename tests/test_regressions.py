@@ -1,7 +1,7 @@
 """Behavior guards captured before the maintainability refactor.
 
 Only temporary paths and inline asset bodies are normalized in page fixtures.
-Interaction attributes retain their pre-redesign hashes; visual snapshots include
+Interaction attributes retain their reviewed baseline hashes; visual snapshots include
 the current inline asset hashes.
 """
 
@@ -99,7 +99,7 @@ class GalleryRegressionTests(unittest.TestCase):
                 json.dumps(contract.items, sort_keys=True).encode()
             ).hexdigest(),
             expected_contracts[name],
-            "Interactive wiring changed from the pre-redesign baseline",
+            "Interactive wiring changed from the reviewed baseline",
         )
         # Keep exact asset content guarded without duplicating it in every fixture.
         for tag in ("script", "style"):
