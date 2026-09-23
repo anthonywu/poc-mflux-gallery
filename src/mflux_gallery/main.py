@@ -114,24 +114,26 @@ def log_notif(
         add_toast(session, notif, **toast_kwargs)
 
 
-def _gallery_page(
+def gallery_page_response(
     app_gallery: gallery.Gallery,
     config: AppConfig,
-    img_elems: list[FT],
-    mode: views.GalleryMode = "default",
-    resize_width: int | None = None,
-) -> tuple[FT, FT]:
-    # Get actual total count of images in gallery
-    total_images = app_gallery.count_all_images()
-    current_resize = (
-        resize_width if resize_width is not None else config.resize_max_width
+    mode: views.GalleryMode,
+    resize_width: int | None,
+) -> Response | tuple[FT, FT]:
+    if resize_width is None:
+        path = "/" if mode == "default" else f"/{mode}"
+        return RedirectResponse(f"{path}?resize_width={config.resize_max_width}")
+    sort_order = "oldest" if mode == "oldest" else "newest"
+    img_elems = get_page_images(
+        app_gallery, config, sort_order=sort_order, resize_width=resize_width
     )
-
+    if mode == "shuffled":
+        random.shuffle(img_elems)
     return views.gallery_page(
         img_elems,
         gallery_dir=config.directory,
-        total_images=total_images,
-        current_resize=current_resize,
+        total_images=app_gallery.count_all_images(),
+        current_resize=resize_width,
         mode=mode,
     )
 
@@ -208,33 +210,15 @@ def register_page_routes(
 ) -> None:
     @app.route("/")
     def get(session, resize_width: int | None = None):
-        if resize_width is None:
-            return RedirectResponse(f"/?resize_width={config.resize_max_width}")
-        img_elems = get_page_images(app_gallery, config, resize_width=resize_width)
-        return _gallery_page(
-            app_gallery, config, img_elems, mode="default", resize_width=resize_width
-        )
+        return gallery_page_response(app_gallery, config, "default", resize_width)
 
     @app.route("/oldest")
     def get(session, resize_width: int | None = None):
-        if resize_width is None:
-            return RedirectResponse(f"/oldest?resize_width={config.resize_max_width}")
-        img_elems = get_page_images(
-            app_gallery, config, sort_order="oldest", resize_width=resize_width
-        )
-        return _gallery_page(
-            app_gallery, config, img_elems, mode="oldest", resize_width=resize_width
-        )
+        return gallery_page_response(app_gallery, config, "oldest", resize_width)
 
     @app.route("/shuffled")
     def get(session, resize_width: int | None = None):
-        if resize_width is None:
-            return RedirectResponse(f"/shuffled?resize_width={config.resize_max_width}")
-        img_elems = get_page_images(app_gallery, config, resize_width=resize_width)
-        random.shuffle(img_elems)
-        return _gallery_page(
-            app_gallery, config, img_elems, mode="shuffled", resize_width=resize_width
-        )
+        return gallery_page_response(app_gallery, config, "shuffled", resize_width)
 
 
 def create_app(config: AppConfig) -> FastHTML:
