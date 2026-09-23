@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import random
@@ -6,6 +7,7 @@ import typing as t
 from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fasthtml.components import (
     Link,
@@ -17,6 +19,7 @@ from fasthtml.core import FT, FastHTML, HtmxResponseHeaders, reg_re_param, serve
 from fasthtml.fastapp import fast_app
 from fasthtml.toaster import add_toast, setup_toasts
 from fasthtml.xtend import Script, Style
+from PIL import Image
 from rich import print
 from starlette.responses import RedirectResponse, Response
 
@@ -148,6 +151,19 @@ def gallery_page_response(
 def register_image_routes(
     app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
 ) -> None:
+    @app.route("/image_zoom")
+    async def get(gallery_path: str):
+        try:
+            target = await app_gallery.resolve_target(gallery_path)
+            with Image.open(target) as image:
+                buffer = io.BytesIO()
+                image.convert("RGBA").save(buffer, format="PNG")
+            return Response(buffer.getvalue(), media_type="image/png")
+        except gallery.InvalidPathValueError:
+            return Response("Invalid image path", status_code=403)
+        except FileNotFoundError:
+            return Response("Image not found", status_code=404)
+
     @app.route("/image_element")
     async def get(session, gallery_path: str, resize_width: int | None = None):
         try:
@@ -160,7 +176,10 @@ def register_image_routes(
             img_path = config.directory / gallery_path
             metadata = get_image_metadata(img_path)
 
-            return views.image_element(data_uri_src, metadata)
+            return views.image_element(
+                data_uri_src, metadata,
+                zoom_src="/image_zoom?" + urlencode({"gallery_path": gallery_path}),
+            )
         except FileNotFoundError:
             return P(
                 f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
