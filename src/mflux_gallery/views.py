@@ -182,6 +182,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Latest",
+                    Kbd("A", cls="nav-shortcut"),
+                    aria_keyshortcuts="a",
                     href=f"/?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "default" else None,
@@ -190,6 +192,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Oldest",
+                    Kbd("Z", cls="nav-shortcut"),
+                    aria_keyshortcuts="z",
                     href=f"/oldest?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "oldest" else None,
@@ -198,6 +202,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Shuffled",
+                    Kbd("S", cls="nav-shortcut"),
+                    aria_keyshortcuts="s",
                     href=f"/shuffled?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "shuffled" else None,
@@ -209,12 +215,14 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
                     id="resize-select",
                     name="resize_width",
                     cls="z-select",
+                    title="Max width: 1 = 256px, 2 = 512px, 3 = 768px, 4 = 1024px",
+                    aria_keyshortcuts="1 2 3 4",
                     onchange=f"window.location.href = '{('/' if mode == 'default' else '/' + mode)}?resize_width=' + this.value",
                 )(
-                    Option("256px", value="256", selected=current_resize == 256),
-                    Option("512px", value="512", selected=current_resize == 512),
-                    Option("768px", value="768", selected=current_resize == 768),
-                    Option("1024px", value="1024", selected=current_resize == 1024),
+                    Option("256px · 1", value="256", selected=current_resize == 256),
+                    Option("512px · 2", value="512", selected=current_resize == 512),
+                    Option("768px · 3", value="768", selected=current_resize == 768),
+                    Option("1024px · 4", value="1024", selected=current_resize == 1024),
                 ),
             ),
             Li()(
@@ -297,7 +305,8 @@ def gallery_controls() -> FT:
                     Li(Kbd("p"), Span("Previous image")),
                     Li(Kbd("j"), Span("Jump back 10 slides")),
                     Li(Kbd("k"), Span("Jump forward 10 slides")),
-                    Li(Kbd("a"), Span("Go to first slide")),
+                    Li(Kbd("Home"), Span("Go to first slide")),
+                    Li(Kbd("A / Z / S"), Span("Latest / Oldest / Shuffled")),
                     Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
                     Li(Kbd("f"), Span("Show in Finder")),
@@ -324,7 +333,7 @@ def gallery_page(
             Div(
                 Div(Small("MFLUX / IMAGE LIBRARY", cls="eyebrow"), H1("Gallery")),
                 Div(
-                    Code(gallery_dir),
+                    Code(gallery_dir, title=str(gallery_dir)),
                     Span(
                         Sup(total_images, id="photo-counter"),
                         " images",
@@ -335,6 +344,7 @@ def gallery_page(
                 cls="gallery-heading",
             ),
             gallery_navigation(mode, current_resize),
+            browse_controls(),
             Swiper_Container(
                 *[
                     Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
@@ -368,7 +378,6 @@ def gallery_page(
                 id="filmstrip",
                 hidden=True,
             ),
-            browse_controls(),
             gallery_controls(),
             cls="gallery-shell",
         ),

@@ -90,6 +90,31 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.page.wait_for_timeout(100)
 
+    def test_sort_and_width_shortcuts(self):
+        for key, path in [("z", "/oldest"), ("S", "/shuffled"), ("a", "/")]:
+            self.page.keyboard.press(key)
+            self.page.wait_for_url(self.url + path + "?resize_width=512")
+            expect(self.page.locator("nav [aria-current=page] kbd")).to_have_text(
+                key.upper()
+            )
+        for key, width in [("1", "256"), ("2", "512"), ("3", "768"), ("4", "1024")]:
+            self.page.keyboard.press(key)
+            self.page.wait_for_url(self.url + "/?resize_width=" + width)
+            expect(self.page.locator("#resize-select")).to_have_value(width)
+            expect(
+                self.page.locator(f'#resize-select option[value="{width}"]')
+            ).to_have_text(f"{width}px · {key}")
+        self.page.keyboard.press("e")
+        expect(self.page.locator("#slide-position")).to_have_text("5 of 5")
+        self.page.keyboard.press("Home")
+        expect(self.page.locator("#slide-position")).to_have_text("1 of 5")
+        self.page.evaluate(
+            "document.body.insertAdjacentHTML('beforeend', '<input id=typing-test>')"
+        )
+        self.page.locator("#typing-test").press_sequentially("saz1234d")
+        self.assertEqual(len(list(self.root.glob("*.jpg"))), 5)
+        self.assertEqual(self.page.url, self.url + "/?resize_width=1024")
+
     def test_filmstrip_is_optional_and_bounded(self):
         for i in range(5, 20):
             Image.new("RGB", (64, 64), "blue").save(self.root / f"image-{i}.jpg")
@@ -147,6 +172,7 @@ class GalleryBrowserTests(unittest.TestCase):
         self.page.locator('[data-action="focus"]').click()
         expect(self.page.locator("html")).to_have_class(re.compile("focus-mode"))
         expect(self.page.locator(".gallery-heading")).to_be_hidden()
+        expect(self.page.locator('[data-action="filmstrip"]')).to_be_hidden()
         self.page.keyboard.press("n")
         expect(self.page.locator("#slide-position")).to_have_text("2 of 5")
         self.page.keyboard.press("Escape")

@@ -28,7 +28,6 @@ def _headers() -> tuple[FT, ...]:
     swiper_js = Script(
         src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
     )
-    jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
     custom_handlers = Script(
         files("mflux_gallery").joinpath("assets/gallery.js").read_text(encoding="utf-8")
@@ -45,7 +44,6 @@ def _headers() -> tuple[FT, ...]:
             rel="stylesheet",
             href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css",
         ),
-        jquery_js,
         swiper_js,
         custom_handlers,
         custom_css,
