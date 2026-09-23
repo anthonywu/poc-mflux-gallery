@@ -76,6 +76,29 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.page.wait_for_timeout(100)
 
+    def test_navigation_and_image_fit(self):
+        expect(self.page.locator("#slide-position")).to_have_text("1 of 5")
+        expect(
+            self.page.get_by_role("button", name="Previous image", exact=True)
+        ).to_be_disabled()
+        self.page.get_by_role("button", name="Next image", exact=True).click()
+        expect(self.page.locator("#slide-position")).to_have_text("2 of 5")
+        self.page.keyboard.press("e")
+        expect(self.page.locator("#slide-position")).to_have_text("5 of 5")
+        expect(
+            self.page.get_by_role("button", name="Next image", exact=True)
+        ).to_be_disabled()
+        for width in (1440, 640, 390, 280, 240):
+            self.page.set_viewport_size({"width": width, "height": 900})
+            image = self.page.locator(".swiper-slide-active img")
+            expect(image).to_be_visible()
+            box = image.bounding_box()
+            self.assertAlmostEqual(box["width"], box["height"], delta=1)
+            self.assertLessEqual(box["height"], 900)
+            self.assertLessEqual(
+                self.page.evaluate("document.documentElement.scrollWidth"), width
+            )
+
     def test_delete_removes_only_requested_slide(self):
         for index, remaining in [(2, 4), (0, 3), (2, 2), (1, 1), (0, 0)]:
             self.slide_to(index)

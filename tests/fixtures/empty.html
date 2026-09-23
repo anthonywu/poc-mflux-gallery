@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/surreal@main/surreal.js"></script><script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>    <meta name="format-detection" content="telephone=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:1a8c06595462b2055dccbed473c0a9866ce974fb303c000abfcbb1158e973ab5</script>    <style>sha256:dc890426ad4128782e0acc0fbfcadf1863de852d706f0d34d0d11050f5300e36</style>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:c0c4f6d14212f986a18b8cd68bb2518993b413b3c3033f0a3e48bb8a8b9faf8f</script>    <style>sha256:30a6776292c05d2037a57ebf9e340e8d9810931dfb0d02554c15d3276b8c8490</style>
     <style>sha256:6ec9872e19c644e89ca39396b2e13a85a6520f569252897b14d11c81f7449124</style>
 <script>sha256:783f6c3ff9033b6294eff594308b490ff850902bb77ed8c69c08b8562737d406</script>  </head>
   <body>
@@ -33,9 +33,10 @@
 <button aria-label="Toggle dark/light mode" onclick="toggleTheme()" class="z-button z-button-default theme-toggle" title="Toggle dark/light mode">🌙</button>          </li>
         </ul>
       </nav>
-<swiper-container keyboard-enabled lazy-preload-prev-next speed="100" zoom></swiper-container>      <footer>
-        <div id="mobile-controls">
-<button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));" class="z-button z-button-default" style="min-width: 80px;">← 10</button><button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));" class="z-button z-button-default" style="min-width: 80px;">10 →</button>        </div>
+<swiper-container keyboard-enabled auto-height lazy-preload-prev-next speed="100" zoom></swiper-container>      <div id="empty-gallery">No images in this batch</div>
+      <div role="group" aria-label="Image navigation" class="browse-controls">
+<button type="button" data-step="-1" aria-label="Previous image" class="z-button z-button-default" title="Previous image (p)">←</button><button type="button" data-step="-10" aria-label="Back ten images" class="z-button z-button-ghost jump-control" title="Back ten (j)">−10</button><span role="status" aria-live="polite" id="slide-position">0 of 0</span><button type="button" data-step="10" aria-label="Forward ten images" class="z-button z-button-ghost jump-control" title="Forward ten (k)">+10</button><button type="button" data-step="1" aria-label="Next image" class="z-button z-button-default" title="Next image (n)">→</button>      </div>
+      <footer>
 <details id="keyboard-controls"><summary>            <h4>Keyboard Controls ('h' to toggle)</h4>
 </summary>          <div id="keyboard-controls-hotkey-list">
             <ul>
