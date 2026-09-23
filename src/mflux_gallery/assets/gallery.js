@@ -21,11 +21,15 @@
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
                       (!document.documentElement.getAttribute('data-theme') &&
                        window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', isDark);
         const btn = document.querySelector('.theme-toggle');
         if (btn) {
             btn.textContent = isDark ? '☀️' : '🌙';
         }
     }
+
+    // Apply 0build colors before the first paint, then update the button on load.
+    initTheme();
 
     // Initialize theme on load
     document.addEventListener('DOMContentLoaded', initTheme);
@@ -296,4 +300,41 @@
             window.location.href = currentPath + '?' + currentSearch.toString();
         }
     });
-    
+
+    // Delegation also covers slides inserted after the initial page load.
+    document.addEventListener('click', async function(event) {
+        const button = event.target.closest('.copy-filename');
+        if (!button) return;
+        const filename = button.dataset.filename;
+        const hint = button.querySelector(".copy-hint");
+        button.disabled = true;
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(filename);
+            } else {
+                // Local HTTP galleries may not have access to the Clipboard API.
+                const field = document.createElement('textarea');
+                field.value = filename;
+                field.style.cssText = 'position:fixed;left:-9999px;top:0';
+                document.body.appendChild(field);
+                try {
+                    field.select();
+                    if (!document.execCommand('copy')) throw new Error('Copy unavailable');
+                } finally {
+                    field.remove();
+                }
+            }
+            hint.textContent = 'Copied!';
+        } catch {
+            hint.textContent = 'Copy failed';
+        } finally {
+            button.classList.add("copy-feedback");
+            button.disabled = false;
+            button.focus({preventScroll: true});
+            clearTimeout(button.copyFeedbackTimer);
+            button.copyFeedbackTimer = setTimeout(() => {
+                hint.textContent = 'Copy filename';
+                button.classList.remove('copy-feedback');
+            }, 1800);
+        }
+    });

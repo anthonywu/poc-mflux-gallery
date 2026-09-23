@@ -123,6 +123,14 @@ uv sync --python 3.15.0rc2 --locked --no-cache --reinstall-package httptools
 To return to the recommended stable version, run
 `uv sync --python 3.14 --locked`.
 
+## Interface styling
+
+The gallery uses [0build](https://0build.dev/docs/latest/kit/introduction/)
+0.6.12 CSS, pinned on jsDelivr, with gallery layout in
+`src/mflux_gallery/assets/gallery.css`. No frontend build step is required.
+Native controls and Swiper handle interactions; 0build JavaScript and MonsterUI
+are not required. The theme toggle keeps the existing saved light/dark preference.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.

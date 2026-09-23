@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fasthtml.components import (
+    H1,
     H4,
     A,
     Button,
@@ -20,7 +21,6 @@ from fasthtml.components import (
     Mark,
     Nav,
     Option,
-    P,
     Select,
     Small,
     Span,
@@ -38,15 +38,15 @@ GalleryMode = Literal["default", "shuffled", "oldest"]
 
 
 def image_actions(gallery_path: str, count: int) -> FT:
-    return Div(cls="grid image-actions", style="margin-top: 10px;")(
+    return Div(cls="image-actions")(
         Div(),
         Div(
             Form(hx_post="/image_action")(
                 Button(
-                    "🔍 Show in Finder ",
+                    "Show in Finder ",
                     Kbd("f"),
                     type="submit",
-                    cls="secondary show-in-finder",
+                    cls="z-button z-button-default show-in-finder",
                     style="width: 100%;",
                 ),
                 Input(type="hidden", name="gallery_path", value=gallery_path),
@@ -57,10 +57,10 @@ def image_actions(gallery_path: str, count: int) -> FT:
         Div(
             Form(hx_post="/image_action")(
                 Button(
-                    "🔥 Delete ",
+                    "Delete ",
                     Kbd("d"),
                     type="submit",
-                    cls="contrast delete-image",
+                    cls="z-button z-button-default delete-image",
                     style="width: 100%;",
                 ),
                 Input(type="hidden", name="gallery_path", value=gallery_path),
@@ -103,8 +103,19 @@ def image_card(
                 Div(cls="skeleton-loader"), Small(cls="skeleton-text short")
             )
         ),
-        Div(P(f"📂 {gallery_path}", cls="image-path-label")),
+        Div(
+            Button(
+                Span(gallery_path, cls="image-path-label"),
+                Span("Copy filename", cls="copy-hint", aria_live="polite"),
+                type="button",
+                cls="copy-filename",
+                data_filename=Path(gallery_path).name,
+                aria_label="Copy filename to clipboard",
+            ),
+            cls="image-filename",
+        ),
         image_actions(gallery_path, count),
+        cls="image-card z-card",
         id=f"container-image-{count}",
         open=True,
     )
@@ -120,7 +131,7 @@ def metadata_panel(metadata: dict[str, Any]) -> FT:
     ]
     return Details(
         Summary(
-            "📋 Metadata (",
+            "Metadata (",
             Strong("Guidance: "),
             metadata.get("guidance", "n/a"),
             " / ",
@@ -157,16 +168,38 @@ def image_element(data_uri_src: str, metadata: dict[str, Any] | None) -> FT:
 
 
 def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
-    return Nav()(
+    return Nav(aria_label="Gallery controls")(
         Ul()(
-            Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
-            Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
-            Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
+            Li(
+                A(
+                    "Latest",
+                    href=f"/?resize_width={current_resize}",
+                    cls="z-button z-button-ghost",
+                    aria_current="page" if mode == "default" else None,
+                )
+            ),
+            Li(
+                A(
+                    "Oldest",
+                    href=f"/oldest?resize_width={current_resize}",
+                    cls="z-button z-button-ghost",
+                    aria_current="page" if mode == "oldest" else None,
+                )
+            ),
+            Li(
+                A(
+                    "Shuffled",
+                    href=f"/shuffled?resize_width={current_resize}",
+                    cls="z-button z-button-ghost",
+                    aria_current="page" if mode == "shuffled" else None,
+                )
+            ),
             Li()(
                 Label("Max Width: ", For="resize-select", style="margin-right: 5px;"),
                 Select(
                     id="resize-select",
                     name="resize_width",
+                    cls="z-select",
                     onchange=f"window.location.href = '{('/' if mode == 'default' else '/' + mode)}?resize_width=' + this.value",
                 )(
                     Option("256px", value="256", selected=current_resize == 256),
@@ -178,7 +211,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li()(
                 Button(
                     "🌙",
-                    cls="theme-toggle",
+                    cls="z-button z-button-default theme-toggle",
+                    aria_label="Toggle dark/light mode",
                     onclick="toggleTheme()",
                     title="Toggle dark/light mode",
                 )
@@ -191,15 +225,15 @@ def gallery_controls() -> FT:
     return Footer(
         Div(id="mobile-controls")(
             Button(
-                "⏪ -10",
+                "← 10",
                 onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));",
-                cls="secondary",
+                cls="z-button z-button-default",
                 style="min-width: 80px;",
             ),
             Button(
-                "+10 ⏩",
+                "10 →",
                 onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));",
-                cls="secondary",
+                cls="z-button z-button-default",
                 style="min-width: 80px;",
             ),
         ),
@@ -233,9 +267,18 @@ def gallery_page(
     return (
         Title(gallery_dir),
         Div(
-            Div()(
-                Code(gallery_dir, style="font-size: 0.5em;"),
-                Sup(total_images, id="photo-counter"),
+            Div(
+                Div(Small("MFLUX / IMAGE LIBRARY", cls="eyebrow"), H1("Gallery")),
+                Div(
+                    Code(gallery_dir),
+                    Span(
+                        Sup(total_images, id="photo-counter"),
+                        " images",
+                        cls="image-count",
+                    ),
+                    cls="gallery-location",
+                ),
+                cls="gallery-heading",
             ),
             gallery_navigation(mode, current_resize),
             Swiper_Container(
@@ -252,5 +295,6 @@ def gallery_page(
                 zoom=True,
             ),
             gallery_controls(),
+            cls="gallery-shell",
         ),
     )

@@ -1,7 +1,8 @@
 """Behavior guards captured before the maintainability refactor.
 
 Only temporary paths and inline asset bodies are normalized in page fixtures.
-The asset bodies are checked separately using their pre-refactor SHA-256 hashes.
+Interaction attributes retain their pre-redesign hashes; visual snapshots include
+the current inline asset hashes.
 """
 
 import base64
@@ -12,6 +13,7 @@ import os
 import re
 import tempfile
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +26,41 @@ from mflux_gallery.config import AppConfig
 
 FIXTURES = Path(__file__).parent / "fixtures"
 NOW = 1_700_000_000
+
+
+class InteractionContract(HTMLParser):
+    """Guard wiring independently of visual markup and inline asset changes."""
+
+    def __init__(self):
+        super().__init__()
+        self.items = []
+
+    def handle_starttag(self, tag, attrs):
+        # The copy control is new; retain the original wiring baseline.
+        if "copy-filename" in dict(attrs).get("class", "").split():
+            return
+        behavior_attrs = {
+            "id",
+            "name",
+            "type",
+            "value",
+            "onchange",
+            "onclick",
+            "open",
+            "selected",
+            "keyboard-enabled",
+            "zoom",
+            "speed",
+        }
+        kept = {
+            key: value
+            for key, value in attrs
+            if key.startswith("hx-")
+            or key in behavior_attrs
+            or (key == "href" and value.startswith("/"))
+        }
+        if kept:
+            self.items.append([tag, kept])
 
 
 class GalleryRegressionTests(unittest.TestCase):
@@ -52,6 +89,18 @@ class GalleryRegressionTests(unittest.TestCase):
 
     def assert_snapshot(self, name, html):
         html = html.replace(str(self.root), "<GALLERY>")
+        contract = InteractionContract()
+        contract.feed(html)
+        expected_contracts = json.loads(
+            (FIXTURES / "interaction_contracts.json").read_text()
+        )
+        self.assertEqual(
+            hashlib.sha256(
+                json.dumps(contract.items, sort_keys=True).encode()
+            ).hexdigest(),
+            expected_contracts[name],
+            "Interactive wiring changed from the pre-redesign baseline",
+        )
         # Keep exact asset content guarded without duplicating it in every fixture.
         for tag in ("script", "style"):
             html = re.sub(
