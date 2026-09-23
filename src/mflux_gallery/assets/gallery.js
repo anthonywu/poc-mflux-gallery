@@ -282,10 +282,11 @@
 
     // Delegation also covers slides inserted after the initial page load.
     document.addEventListener('click', async function(event) {
-        const button = event.target.closest('.copy-filename');
+        const button = event.target.closest('.copy-filename, .copy-prompt');
         if (!button) return;
-        const filename = button.dataset.filename;
-        const hint = button.querySelector(".copy-hint");
+        const isPrompt = button.classList.contains('copy-prompt');
+        const filename = isPrompt ? button.closest('.metadata-section').querySelector('.prompt-text').textContent : button.dataset.filename;
+        const hint = isPrompt ? button : button.querySelector('.copy-hint');
         button.disabled = true;
         try {
             if (navigator.clipboard && window.isSecureContext) {
@@ -312,7 +313,7 @@
             button.focus({preventScroll: true});
             clearTimeout(button.copyFeedbackTimer);
             button.copyFeedbackTimer = setTimeout(() => {
-                hint.textContent = 'Copy filename';
+                hint.textContent = isPrompt ? 'Copy prompt' : 'Copy filename';
                 button.classList.remove('copy-feedback');
             }, 1800);
         }
@@ -347,3 +348,24 @@
         document.querySelector('swiper-container')?.swiper?.updateAutoHeight(0);
     }, true);
     document.addEventListener('htmx:afterSettle', updateNavigation);
+
+    function setFocusMode(enabled) {
+        document.documentElement.classList.toggle('focus-mode', enabled);
+        const button = document.querySelector('[data-action="focus"]');
+        button.setAttribute('aria-pressed', String(enabled));
+        button.textContent = enabled ? 'Exit focus' : 'Focus';
+        document.querySelector('swiper-container')?.swiper?.update();
+    }
+    document.addEventListener('click', event => {
+        if (event.target.closest('[data-action="focus"]')) {
+            setFocusMode(!document.documentElement.classList.contains('focus-mode'));
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') setFocusMode(false);
+        if (event.target.closest('input, select, textarea, [contenteditable="true"]') || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key === 'v') {
+            event.preventDefault();
+            setFocusMode(!document.documentElement.classList.contains('focus-mode'));
+        }
+    });

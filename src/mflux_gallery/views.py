@@ -122,30 +122,39 @@ def image_card(
 
 
 def metadata_panel(metadata: dict[str, Any]) -> FT:
-    metadata_components = [
-        Div(
-            Strong("Prompt: "),
-            Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
-            style="margin-top: 10px;",
-        )
-    ]
+    fields = (
+        ("guidance", "Guidance"),
+        ("steps", "Steps"),
+        ("seed", "Seed"),
+        ("model", "Model"),
+    )
     return Details(
-        Summary(
-            "Metadata (",
-            Strong("Guidance: "),
-            metadata.get("guidance", "n/a"),
-            " / ",
-            Strong("Steps: "),
-            metadata.get("steps", "n/a"),
-            ")",
-            style="cursor: pointer; font-weight: bold;",
+        Summary("Image details", Span(" · prompt & settings", cls="metadata-hint")),
+        Div(
+            *[
+                Span(
+                    Span(label, cls="metadata-key"),
+                    " ",
+                    str(metadata[key]),
+                    cls="metadata-value",
+                )
+                for key, label in fields
+                if key in metadata
+            ],
+            cls="metadata-values",
         ),
         Div(
-            *metadata_components,
-            style="padding: 10px; border-radius: 5px; margin-top: 10px;",
+            Strong("Prompt"),
+            Button(
+                "Copy prompt",
+                type="button",
+                cls="z-button z-button-ghost copy-prompt",
+                aria_live="polite",
+            ),
+            cls="prompt-heading",
         ),
+        Code(str(metadata.get("prompt", "n/a")), cls="prompt-text"),
         cls="metadata-section",
-        style="margin-top: 10px;",
     )
 
 
@@ -256,6 +265,14 @@ def browse_controls() -> FT:
             title="Next image (n)",
             cls="z-button z-button-default",
         ),
+        Button(
+            "Focus",
+            type="button",
+            data_action="focus",
+            aria_pressed="false",
+            title="Focus mode (v); Escape to exit",
+            cls="z-button z-button-ghost",
+        ),
         cls="browse-controls",
         role="group",
         aria_label="Image navigation",
@@ -277,6 +294,8 @@ def gallery_controls() -> FT:
                     Li(Kbd("d"), Span("Delete image and advance slide")),
                     Li(Kbd("f"), Span("Show in Finder")),
                     Li(Kbd("m"), Span("Toggle metadata visibility")),
+                    Li(Kbd("v"), Span("Focus mode; Escape to exit")),
+                    Li(Kbd("1–4"), Span("Change image resolution")),
                 )
             ),
         ),

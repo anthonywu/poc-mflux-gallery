@@ -76,6 +76,29 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.page.wait_for_timeout(100)
 
+    def test_focus_metadata_and_prompt_copy(self):
+        self.page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+        self.page.keyboard.press("m")
+        metadata = self.page.locator(".swiper-slide-active .metadata-section")
+        expect(metadata).to_have_attribute("open", "")
+        expect(metadata.locator(".metadata-values")).to_contain_text("Steps 20")
+        metadata.locator(".copy-prompt").click()
+        expect(metadata.locator(".copy-prompt")).to_have_text("Copied!")
+        self.assertEqual(
+            self.page.evaluate("navigator.clipboard.readText()"), "A <quiet> landscape"
+        )
+        self.page.locator('[data-action="focus"]').click()
+        expect(self.page.locator("html")).to_have_class(re.compile("focus-mode"))
+        expect(self.page.locator(".gallery-heading")).to_be_hidden()
+        self.page.keyboard.press("n")
+        expect(self.page.locator("#slide-position")).to_have_text("2 of 5")
+        self.page.keyboard.press("Escape")
+        expect(self.page.locator(".gallery-heading")).to_be_visible()
+        expect(self.page.locator('[data-action="focus"]')).to_have_attribute(
+            "aria-pressed", "false"
+        )
+        self.assertEqual(self.errors, [])
+
     def test_navigation_and_image_fit(self):
         expect(self.page.locator("#slide-position")).to_have_text("1 of 5")
         expect(
