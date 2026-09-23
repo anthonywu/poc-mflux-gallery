@@ -13,7 +13,7 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 - 🖼️ **Image Gallery Browsing**: Display images from any local directory with swiper-based UI
 - 🗑️ **Image Management**: Delete images directly from the UI (one tap or one key press)
 - ⌨️ **Keyboard Controls**: Navigate and decide with keyboard shortcuts
-- 🔍 **Finder Integration**: Show/reveal images in Finder (macOS)
+- 🔍 **Finder Integration**: Show/reveal images in Finder (macOS servers only)
 
 - 📸 **Multi-format Support**: Works with JPEG, PNG, GIF, HEIC, and more
 - 🔄 **Multiple View Modes**: Browse by latest (modification time) or shuffled order
@@ -91,7 +91,7 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 | Key | Action |
 |-----|--------|
 | `d` | Delete current image |
-| `f` | Show in Finder (macOS) |
+| `f` | Show in Finder (macOS server only; hidden and inactive on Linux) |
 | `n` | Next image |
 | `p` | Previous image |
 | `A` / `Z` / `S` | Latest / Oldest / Shuffled (keeps the selected width) |

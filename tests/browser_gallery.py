@@ -90,6 +90,25 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.page.wait_for_timeout(100)
 
+    def test_finder_shortcut_matches_server_platform(self):
+        requests = []
+
+        def record_action(route):
+            requests.append(route.request.post_data)
+            route.fulfill(status=200, body="Opened")
+
+        self.page.route("**/image_action", record_action)
+        expected = 1 if sys.platform == "darwin" else 0
+        expect(self.page.locator(".swiper-slide-active .show-in-finder")).to_have_count(
+            expected
+        )
+        expect(
+            self.page.locator("#keyboard-controls li").filter(has_text="Show in Finder")
+        ).to_have_count(expected)
+        self.page.keyboard.press("f")
+        self.page.wait_for_timeout(100)
+        self.assertEqual(len(requests), expected)
+
     def test_sort_and_width_shortcuts(self):
         for key, path in [("z", "/oldest"), ("S", "/shuffled"), ("a", "/")]:
             self.page.keyboard.press(key)
