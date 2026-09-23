@@ -6,34 +6,9 @@ import typing as t
 from importlib.resources import files
 
 from fasthtml.components import (
-    H4,
-    A,
-    Button,
-    Code,
-    Details,
-    Div,
-    Footer,
-    Form,
-    Img,
-    Input,
-    Kbd,
-    Label,
-    Li,
-    Mark,
     Meta,
-    Nav,
-    Option,
     P,
-    Select,
-    Small,
-    Span,
-    Strong,
-    Summary,
     Sup,
-    Swiper_Container,
-    Swiper_Slide,
-    Title,
-    Ul,
 )
 from fasthtml.core import HtmxResponseHeaders, reg_re_param, serve
 from fasthtml.fastapp import fast_app
@@ -42,7 +17,7 @@ from fasthtml.xtend import Script, Style
 from rich import print  # noqa
 from starlette.responses import RedirectResponse, Response
 
-from . import cli, gallery
+from . import cli, gallery, views
 
 parser = cli.create_parser()
 args = parser.parse_args()
@@ -119,78 +94,14 @@ def get_page_images(sort_order="newest", resize_width=None):
         gallery_path = str(img_path.relative_to(GALLERY_DIR))
 
         # Prepare hx_vals with gallery_path and optional resize_width
-        hx_vals = {"gallery_path": gallery_path}
-        if resize_width is not None:
-            hx_vals["resize_width"] = resize_width
-
         tags.append(
-            Details(
-                Summary(
-                    Mark(
-                        Small(
-                            f"{count} / of batch size {args.load_limit} / total: {len(matches)}"
-                        )
-                    ),
-                    Small(get_created_recency_description(img_path.stat().st_mtime)),
-                ),
-                Div(
-                    id=f"lazy-image-{count}",
-                    hx_trigger="intersect once throttle:2s",
-                    hx_get="/image_element",
-                    hx_vals=hx_vals,
-                    hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
-                )(
-                    Div(cls="skeleton-container")(
-                        Div(cls="skeleton-loader"),
-                        Small(cls="skeleton-text short"),
-                    )
-                ),
-                Div(
-                    P(f"📂 {gallery_path}", cls="image-path-label"),
-                ),
-                Div(cls="grid image-actions", style="margin-top: 10px;")(
-                    Div(),  # empty filler
-                    Div(
-                        Form(hx_post="/image_action")(
-                            Button(
-                                "🔍 Show in Finder ",
-                                Kbd("f"),
-                                type="submit",
-                                cls="secondary show-in-finder",
-                                style="width: 100%;",
-                            ),
-                            Input(
-                                type="hidden", name="gallery_path", value=gallery_path
-                            ),
-                            Input(type="hidden", name="action", value="show-in-finder"),
-                        ),
-                        hx_swap="none",
-                    ),
-                    Div(
-                        Form(hx_post="/image_action")(
-                            Button(
-                                "🔥 Delete ",
-                                Kbd("d"),
-                                type="submit",
-                                cls="contrast delete-image",
-                                style="width: 100%;",
-                            ),
-                            Input(
-                                type="hidden", name="gallery_path", value=gallery_path
-                            ),
-                            Input(type="hidden", name="action", value="delete"),
-                            Input(
-                                type="hidden",
-                                name="slide_delete_index",
-                                value=str(count),
-                            ),
-                            hx_swap="outerHTML",
-                            hx_target=f"#slide-{count}",
-                        ),
-                    ),
-                ),
-                id=f"container-image-{count}",
-                open=True,
+            views.image_card(
+                gallery_path,
+                count,
+                args.load_limit,
+                len(matches),
+                get_created_recency_description(img_path.stat().st_mtime),
+                resize_width,
             )
         )
     return tags
@@ -230,51 +141,7 @@ async def get(session, gallery_path: str, resize_width: int = None):
         metadata = get_image_metadata(img_path)
 
         # Build the image display components
-        components = [
-            Div(
-                cls="swiper-zoom-container",
-                style="width: 100%; display: flex; justify-content: center;",
-            )(
-                Img(
-                    src=f"{data_uri_src}",
-                    style="height: auto; width: auto; max-width: 100%;",
-                    cls="swiper-zoom-target",
-                )
-            )
-        ]
-
-        # Add metadata display if available
-        if metadata:
-            metadata_components = [
-                Div(
-                    Strong("Prompt: "),
-                    Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
-                    style="margin-top: 10px;",
-                ),
-            ]
-
-            components.append(
-                Details(
-                    Summary(
-                        "📋 Metadata (",
-                        Strong("Guidance: "),
-                        metadata.get("guidance", "n/a"),
-                        " / ",
-                        Strong("Steps: "),
-                        metadata.get("steps", "n/a"),
-                        ")",
-                        style="cursor: pointer; font-weight: bold;",
-                    ),
-                    Div(
-                        *metadata_components,
-                        style="padding: 10px; border-radius: 5px; margin-top: 10px;",
-                    ),
-                    cls="metadata-section",
-                    style="margin-top: 10px;",
-                )
-            )
-
-        return Div(*components)
+        return views.image_element(data_uri_src, metadata)
     except FileNotFoundError:
         return P(
             f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
@@ -338,90 +205,8 @@ def _gallery_page(
     # Determine current resize width for dropdown
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
-    return Title(GALLERY_DIR), Div(
-        Div()(
-            Code(GALLERY_DIR, style="font-size: 0.5em;"),
-            Sup(total_images, id="photo-counter"),
-        ),
-        Nav()(
-            Ul()(
-                Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
-                Li(A(href=f"/oldest?resize_width={current_resize}")("Oldest ◀️")),
-                Li(A(href=f"/shuffled?resize_width={current_resize}")("Shuffled 🔀")),
-                Li()(
-                    Label(
-                        "Max Width: ", For="resize-select", style="margin-right: 5px;"
-                    ),
-                    Select(
-                        id="resize-select",
-                        name="resize_width",
-                        onchange=f"window.location.href = '{'/' if mode == 'default' else '/' + mode}?resize_width=' + this.value",
-                    )(
-                        Option("256px", value="256", selected=(current_resize == 256)),
-                        Option("512px", value="512", selected=(current_resize == 512)),
-                        Option("768px", value="768", selected=(current_resize == 768)),
-                        Option(
-                            "1024px", value="1024", selected=(current_resize == 1024)
-                        ),
-                    ),
-                ),
-                Li()(
-                    Button(
-                        "🌙",
-                        cls="theme-toggle",
-                        onclick="toggleTheme()",
-                        title="Toggle dark/light mode",
-                    )
-                ),
-            )
-        ),
-        Swiper_Container(
-            *[
-                Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
-                for i, elem in enumerate(img_elems, 1)
-            ],
-            # https://swiperjs.com/swiper-api#parameters
-            keyboard_enabled=True,
-            lazy_preload_prev_next=True,
-            # centered_slides=True,
-            navigation=False,
-            pagination=False,
-            scroolbar=False,
-            speed=100,
-            zoom=True,
-        ),
-        Footer(
-            Div(id="mobile-controls")(
-                Button(
-                    "⏪ -10",
-                    onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));",
-                    cls="secondary",
-                    style="min-width: 80px;",
-                ),
-                Button(
-                    "+10 ⏩",
-                    onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));",
-                    cls="secondary",
-                    style="min-width: 80px;",
-                ),
-            ),
-            Details(id="keyboard-controls")(
-                Summary(H4("Keyboard Controls ('h' to toggle)")),
-                Div(id="keyboard-controls-hotkey-list")(
-                    Ul(
-                        Li(Kbd("n"), Span("Next image")),
-                        Li(Kbd("p"), Span("Previous image")),
-                        Li(Kbd("j"), Span("Jump back 10 slides")),
-                        Li(Kbd("k"), Span("Jump forward 10 slides")),
-                        Li(Kbd("a"), Span("Go to first slide")),
-                        Li(Kbd("e"), Span("Go to last slide")),
-                        Li(Kbd("d"), Span("Delete image and advance slide")),
-                        Li(Kbd("f"), Span("Show in Finder")),
-                        Li(Kbd("m"), Span("Toggle metadata visibility")),
-                    ),
-                ),
-            ),
-        ),
+    return views.gallery_page(
+        title, img_elems, GALLERY_DIR, total_images, current_resize, mode
     )
 
 
