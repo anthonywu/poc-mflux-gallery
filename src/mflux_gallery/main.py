@@ -166,6 +166,20 @@ def register_image_routes(
                 f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
             )
 
+    @app.route("/thumbnail")
+    async def thumbnail(gallery_path: str):
+        try:
+            data = await app_gallery.get_thumbnail(gallery_path)
+        except gallery.InvalidPathValueError:
+            return Response("Invalid image path", status_code=403)
+        except OSError:
+            return Response("Image unavailable", status_code=404)
+        return Response(
+            data,
+            media_type="image/webp",
+            headers={"Cache-Control": "private, max-age=60"},
+        )
+
 
 def register_action_routes(
     app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery

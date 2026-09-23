@@ -331,6 +331,7 @@
         });
         swiper.updateAutoHeight(0);
         updateGalleryImages();
+        updateFilmstrip();
     }
     document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('swiper-container');
@@ -441,4 +442,71 @@
         const loader = retry.closest('.image-loader');
         resetImageLoader(loader);
         loadGalleryImage(loader);
+    });
+
+    let thumbnailObserver;
+    function updateFilmstrip() {
+        const strip = document.getElementById('filmstrip');
+        if (strip.hidden) return;
+        const swiper = document.querySelector('swiper-container').swiper;
+        const items = document.getElementById('filmstrip-items');
+        const start = Math.floor(swiper.activeIndex / 9) * 9;
+        const slides = Array.from(swiper.slides).slice(start, start + 9);
+        const key = slides.map(slide => slide.id).join('|');
+        if (items.dataset.window !== key) {
+            thumbnailObserver?.disconnect();
+            items.replaceChildren();
+            items.dataset.window = key;
+            thumbnailObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.target.dataset.src) {
+                        entry.target.src = entry.target.dataset.src;
+                        delete entry.target.dataset.src;
+                        thumbnailObserver.unobserve(entry.target);
+                    }
+                });
+            }, {root: items, rootMargin: '0px 64px'});
+            slides.forEach((slide, offset) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.slideId = slide.id;
+                const path = slide.querySelector('input[name="gallery_path"]').value;
+                button.setAttribute('aria-label', `Image ${start + offset + 1}: ${path}`);
+                button.title = path;
+                const image = document.createElement('img');
+                image.width = 128;
+                image.height = 96;
+                image.alt = path;
+                image.decoding = 'async';
+                image.dataset.src = '/thumbnail?' + new URLSearchParams({gallery_path: path});
+                button.append(image);
+                items.append(button);
+                thumbnailObserver.observe(image);
+            });
+        }
+        items.querySelectorAll('button').forEach(button => {
+            const active = button.dataset.slideId === swiper.slides[swiper.activeIndex]?.id;
+            button.setAttribute('aria-current', String(active));
+            if (active) button.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        });
+    }
+    document.addEventListener('click', event => {
+        const toggle = event.target.closest('[data-action="filmstrip"]');
+        if (toggle) {
+            const strip = document.getElementById('filmstrip');
+            strip.hidden = !strip.hidden;
+            toggle.setAttribute('aria-expanded', String(!strip.hidden));
+            if (strip.hidden) {
+                thumbnailObserver?.disconnect();
+                const items = document.getElementById('filmstrip-items');
+                items.replaceChildren();
+                delete items.dataset.window;
+            } else updateFilmstrip();
+        }
+        const thumbnail = event.target.closest('[data-slide-id]');
+        if (thumbnail) {
+            const swiper = document.querySelector('swiper-container').swiper;
+            const index = Array.from(swiper.slides).findIndex(slide => slide.id === thumbnail.dataset.slideId);
+            if (index >= 0) swiper.slideTo(index);
+        }
     });
