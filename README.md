@@ -28,12 +28,12 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 
 ## Installation
 
-Requires Python 3.10–3.15. Python 3.15 support is currently tested with
+Requires Python 3.11–3.15. Python 3.15 support is currently tested with
 3.15.0rc2; older alphas such as 3.15.0a7 are incompatible with current
 CPython 3.15 binary wheels (including Cython's build-time wheel).
 
 The image dependencies use `pillow>=12.3,<13` and `pillow-heif>=1.6,<2`,
-which provide Python 3.15 wheels while retaining Python 3.10 support.
+which provide Python 3.15 wheels and support the full declared Python range.
 FastHTML and Rich retain their existing ranges. On Python 3.15, FastHTML's
 Uvicorn dependencies currently build PyYAML, httptools, and uvloop from
 source on Linux, so a C compiler and build tools are required.

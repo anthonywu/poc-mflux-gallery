@@ -6,7 +6,7 @@ build-backend = "uv_build"
 name = "mflux-gallery"
 version = "0.2.0"
 description = "A FastHTML-based image gallery for viewing generated images"
-requires-python = ">=3.10,<3.16"
+requires-python = ">=3.11,<3.16"
 dependencies = [
     "pillow-heif>=1.6,<2.0",
     "pillow>=12.3,<13",
@@ -16,9 +16,6 @@ dependencies = [
 
 [project.scripts]
 mflux-gallery = "mflux_gallery.main:main"
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
