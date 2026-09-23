@@ -28,13 +28,16 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 
 ## Installation
 
+**Python 3.14 is recommended for most users.** The supported range is
+Python 3.11–3.15; optional Python 3.15 prerelease instructions are below.
+
 ### Option 1: Install as a CLI tool with uv
 
 You can install mflux-gallery directly as a command-line tool using `uv`:
 
 ```bash
 # Install from GitHub repository
-uv tool install git+https://github.com/anthonywu/poc-mflux-gallery.git
+uv tool install --python 3.14 git+https://github.com/anthonywu/poc-mflux-gallery.git
 
 # The tool will be available as 'mflux-gallery' command
 mflux-gallery /path/to/images
@@ -47,13 +50,16 @@ mflux-gallery /path/to/images
 git clone https://github.com/anthonywu/poc-mflux-gallery.git mflux-gallery
 cd mflux-gallery
 
-# Create virtual environment and install dependencies with uv
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Install the recommended stable Python version
+uv python install 3.14
 
-# Install the package in development mode
-uv pip install -e .
+# Create the environment and install the locked dependencies
+uv sync --python 3.14 --locked
 ```
+
+Run compatibility smoke tests with `uv run --no-sync python -m unittest discover -s tests -v`.
+These use synthetic images to check discovery, image codecs, resizing, and
+the gallery routes.
 
 ## Usage
 
@@ -66,7 +72,7 @@ mflux-gallery /path/to/images [OPTIONS]
 ### If running from source:
 
 ```bash
-python -m mflux_gallery.main /path/to/images [OPTIONS]
+uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 ```
 
 ### Command Line Options
@@ -90,6 +96,32 @@ python -m mflux_gallery.main /path/to/images [OPTIONS]
 | `p` | Previous image |
 
 Additionally, all [SwiperJS Keyboard Controls](https://swiperjs.com/swiper-api#keyboard-control) are available.
+
+## Optional: Try Python 3.15 prerelease
+
+Python 3.15 support is tested with 3.15.0rc2. From a cloned repository,
+select the release candidate explicitly:
+
+```bash
+# Use the latest uv download catalog to install the tested release candidate
+uvx uv@latest python install 3.15.0rc2
+uv sync --python 3.15.0rc2 --locked
+```
+
+Older alphas such as 3.15.0a7 are incompatible with current CPython 3.15
+binary wheels, including Cython's build-time wheel. On Python 3.15,
+FastHTML's Uvicorn dependencies currently build PyYAML, httptools, and
+uvloop from source on Linux, so a C compiler and build tools are required.
+
+If upgrading from an alpha leaves a native-extension ABI warning, rebuild
+the affected cached package, for example:
+
+```bash
+uv sync --python 3.15.0rc2 --locked --no-cache --reinstall-package httptools
+```
+
+To return to the recommended stable version, run
+`uv sync --python 3.14 --locked`.
 
 ## License
 

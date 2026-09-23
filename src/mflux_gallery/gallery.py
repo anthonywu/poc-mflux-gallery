@@ -35,10 +35,18 @@ class Gallery:
     def __iter__(self) -> Path:
         count = 0
         for suf in self.photo_suffixes:
-            for _ in self.gallery_dir.rglob(f"*{suf}", case_sensitive=False):
+            for _ in self._paths_with_suffix(suf):
                 if count <= self.load_limit:
                     yield _
                 count += 1
+
+    def _paths_with_suffix(self, suffix: str):
+        # Path.rglob(case_sensitive=...) requires Python 3.12.
+        return (
+            path
+            for path in self.gallery_dir.rglob("*")
+            if path.suffix.lower() == suffix.lower()
+        )
 
     def count_all_images(self) -> int:
         """Count all images in the gallery without load limit. Results are cached for 1 minute."""
@@ -56,7 +64,7 @@ class Gallery:
         print("Recounting images...")
         for suf in self.photo_suffixes:
             total += sum(
-                1 for _ in self.gallery_dir.rglob(f"*{suf}", case_sensitive=False)
+                1 for _ in self._paths_with_suffix(suf)
             )
 
         # Update cache
