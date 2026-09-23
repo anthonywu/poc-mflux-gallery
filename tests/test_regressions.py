@@ -68,6 +68,8 @@ class GalleryRegressionTests(unittest.TestCase):
         directory = self.enterContext(tempfile.TemporaryDirectory())
         self.root = Path(directory)
         self.main = main
+        # Keep snapshots deterministic across macOS and Linux.
+        self.enterContext(patch.object(main, "FINDER_AVAILABLE", True))
         for index, name in enumerate(["old.JPG", "middle.JPG", "new.JPG"]):
             path = self.root / name
             Image.new("RGB", (64, 32), "blue").save(path)

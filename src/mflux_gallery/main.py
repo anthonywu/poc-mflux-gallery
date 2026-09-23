@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import sys
 import time
 import typing as t
 from dataclasses import asdict
@@ -22,6 +23,8 @@ from starlette.responses import RedirectResponse, Response
 
 from . import cli, gallery, views
 from .config import AppConfig
+
+FINDER_AVAILABLE = sys.platform == "darwin"
 
 
 def _headers() -> tuple[FT, ...]:
@@ -102,6 +105,7 @@ def get_page_images(
                 load_limit=config.load_limit,
                 total_matches=len(matches),
                 recency=get_created_recency_description(img_path.stat().st_mtime),
+                finder_available=FINDER_AVAILABLE,
                 resize_width=resize_width,
             )
         )
@@ -140,6 +144,7 @@ def gallery_page_response(
         total_images=app_gallery.count_all_images(),
         current_resize=resize_width,
         mode=mode,
+        finder_available=FINDER_AVAILABLE,
     )
 
 
@@ -187,6 +192,9 @@ def register_action_routes(
         action = action.strip().lower()
         if action not in ["delete", "show-in-finder"]:
             return Response(f"{action=} not supported", status_code=403)
+
+        if action == "show-in-finder" and not FINDER_AVAILABLE:
+            return Response("Finder is only available on macOS", status_code=403)
 
         try:
             if action == "delete":

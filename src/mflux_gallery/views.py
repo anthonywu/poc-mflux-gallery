@@ -38,7 +38,9 @@ from fasthtml.core import FT
 GalleryMode = Literal["default", "shuffled", "oldest"]
 
 
-def image_actions(gallery_path: str, count: int) -> FT:
+def image_actions(
+    gallery_path: str, count: int, *, finder_available: bool = False
+) -> FT:
     return Div(cls="image-actions")(
         Div(),
         Div(
@@ -54,7 +56,9 @@ def image_actions(gallery_path: str, count: int) -> FT:
                 Input(type="hidden", name="action", value="show-in-finder"),
             ),
             hx_swap="none",
-        ),
+        )
+        if finder_available
+        else None,
         Div(
             Form(hx_post="/image_action")(
                 Button(
@@ -81,6 +85,7 @@ def image_card(
     load_limit: int,
     total_matches: int,
     recency: str,
+    finder_available: bool = False,
     resize_width: int | None = None,
 ) -> FT:
     image_params = {"gallery_path": gallery_path}
@@ -114,7 +119,7 @@ def image_card(
             ),
             cls="image-filename",
         ),
-        image_actions(gallery_path, count),
+        image_actions(gallery_path, count, finder_available=finder_available),
         cls="image-card z-card",
         id=f"container-image-{count}",
         open=True,
@@ -295,7 +300,7 @@ def browse_controls() -> FT:
     )
 
 
-def gallery_controls() -> FT:
+def gallery_controls(*, finder_available: bool = False) -> FT:
     return Footer(
         Details(id="keyboard-controls")(
             Summary(H4("Keyboard Controls ('h' to toggle)")),
@@ -309,7 +314,7 @@ def gallery_controls() -> FT:
                     Li(Kbd("A / Z / S"), Span("Latest / Oldest / Shuffled")),
                     Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
-                    Li(Kbd("f"), Span("Show in Finder")),
+                    Li(Kbd("f"), Span("Show in Finder")) if finder_available else None,
                     Li(Kbd("m"), Span("Toggle metadata visibility")),
                     Li(Kbd("v"), Span("Focus mode; Escape to exit")),
                     Li(Kbd("1–4"), Span("Change image resolution")),
@@ -326,6 +331,7 @@ def gallery_page(
     total_images: int,
     current_resize: int,
     mode: GalleryMode = "default",
+    finder_available: bool = False,
 ) -> tuple[FT, FT]:
     return (
         Title(gallery_dir),
@@ -378,7 +384,7 @@ def gallery_page(
                 id="filmstrip",
                 hidden=True,
             ),
-            gallery_controls(),
+            gallery_controls(finder_available=finder_available),
             cls="gallery-shell",
         ),
     )
