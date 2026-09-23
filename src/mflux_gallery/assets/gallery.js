@@ -97,45 +97,20 @@
         });
     });
 
-    // Image gallery handlers
+    // Swiper owns slide removal. HTMX only applies the out-of-band count update.
     document.addEventListener('delete-successful', function(event) {
-        // Haptic feedback for mobile devices
-        if (navigator.vibrate) {
-            navigator.vibrate(50);
-        }
-
-        // Get the current active slide index before removal
-        const swiper = $("swiper-container")[0].swiper;
-        const activeIndex = swiper.activeIndex;
-        const slidesCount = swiper.slides.length;
-
-        // Clear loading state on delete button before slide removal
-        const activeSlide = document.querySelector('.swiper-slide-active');
-        if (activeSlide) {
-            const deleteButton = activeSlide.querySelector('button.delete-image');
-            if (deleteButton) {
-                setButtonLoading(deleteButton, false);
-            }
-        }
-
-        // Remove the slide from Swiper after a brief delay to ensure DOM update
-        setTimeout(function() {
-            // Store whether we're at the last slide before removal
-            const isLastSlide = activeIndex === slidesCount - 1;
-
-            // Remove the slide
-            swiper.removeSlide(activeIndex);
-
-            // After removing a slide:
-            // - If we were at the last slide, we're now at the new last slide (no action needed)
-            // - If we weren't at the last slide, we need to stay at the same index (which now shows the next image)
-            // Swiper automatically handles this, but we need to ensure the active slide is visible
-            if (!isLastSlide) {
-                // Force update to ensure the slide is properly displayed
-                swiper.slideTo(activeIndex, 0);
-            }
-        }, 100);
+        event.target.dataset.deleteSucceeded = 'true';
     });
+
+    function removeDeletedSlide(form) {
+        const slide = form.closest('swiper-slide');
+        const swiper = document.querySelector('swiper-container')?.swiper;
+        if (!slide || !swiper) return;
+        const index = Array.from(swiper.slides).indexOf(slide);
+        if (index < 0) return;
+        swiper.removeSlide(index);
+        if (navigator.vibrate) navigator.vibrate(50);
+    }
 
     // Button loading state handling
     function setButtonLoading(button, isLoading) {
@@ -185,8 +160,12 @@
                 } else if (button.classList.contains('delete-image')) {
                     // Delete is successful, but button will be removed with the slide
                     setButtonLoading(button, false);
+                    if (event.detail.elt.dataset.deleteSucceeded === 'true') {
+                        removeDeletedSlide(event.detail.elt);
+                    }
                 }
             } else {
+                button.closest('swiper-slide')?.classList.remove('deleting');
                 showButtonFeedback(button, 'error');
             }
         }
