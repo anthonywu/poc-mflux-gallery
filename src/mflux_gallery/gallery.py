@@ -53,20 +53,17 @@ class Gallery:
         """Count all images in the gallery without load limit. Results are cached for 1 minute."""
         current_time = time.monotonic()
 
-        # Check if cache is still valid
         if (
             self._count_cache is not None
             and current_time - self._count_cache_time < self._cache_duration
         ):
             return self._count_cache
 
-        # Recount images
         total = 0
         print("Recounting images...")
         for suffix in self.photo_suffixes:
             total += sum(1 for _ in self._paths_with_suffix(suffix))
 
-        # Update cache
         self._count_cache = total
         self._count_cache_time = current_time
 
@@ -83,7 +80,6 @@ class Gallery:
         format: str = "WEBP",
         resize_max_width: int | None = None,
     ) -> str:
-        # Use provided resize_max_width or fall back to instance default
         resize_width = (
             resize_max_width if resize_max_width is not None else self.resize_max_width
         )
@@ -97,8 +93,7 @@ class Gallery:
                 )
             buffer = io.BytesIO()
             img.save(buffer, format=format)
-            buffer.seek(0)
-            img_bytes = buffer.read()
+            img_bytes = buffer.getvalue()
         base64_str = base64.b64encode(img_bytes).decode("utf-8")
         return f"data:image/{format.lower()};base64,{base64_str}"
 
@@ -128,8 +123,7 @@ class Gallery:
             else:
                 self.invalidate_count_cache()
             return target, True
-        else:
-            return target, False
+        return target, False
 
     async def show_in_finder(
         self, gallery_path: str | Path

@@ -15,7 +15,7 @@ from fasthtml.core import FT, HtmxResponseHeaders, reg_re_param, serve
 from fasthtml.fastapp import fast_app
 from fasthtml.toaster import add_toast, setup_toasts
 from fasthtml.xtend import Script, Style
-from rich import print  # noqa
+from rich import print
 from starlette.responses import RedirectResponse, Response
 
 from . import cli, gallery, views
@@ -43,7 +43,6 @@ except (FileNotFoundError, PermissionError) as e:
 swiper_js = Script(
     src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
 )
-cash_js = Script(src="https://cdn.jsdelivr.net/npm/cash-dom/dist/cash.min.js")
 jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
 custom_handlers = Script(
@@ -73,8 +72,7 @@ def get_image_metadata(img_path: Path) -> t.Any:
     if json_path.exists():
         try:
             with open(json_path, "r") as metadata_file:
-                data = json.load(metadata_file)
-                return data
+                return json.load(metadata_file)
         except (json.JSONDecodeError, IOError):
             return None
     return None
@@ -86,7 +84,7 @@ def get_page_images(
 ) -> list[FT]:
     reverse = sort_order == "newest"
     matches = sorted(
-        list(iter(app_gallery)), key=lambda path: path.stat().st_mtime, reverse=reverse
+        app_gallery, key=lambda path: path.stat().st_mtime, reverse=reverse
     )
     if not matches:
         print(f"No images found in {GALLERY_DIR}")
@@ -97,7 +95,6 @@ def get_page_images(
             break
         gallery_path = str(img_path.relative_to(GALLERY_DIR))
 
-        # Prepare hx_vals with gallery_path and optional resize_width
         tags.append(
             views.image_card(
                 gallery_path,
@@ -127,24 +124,19 @@ reg_re_param("imgext", "ico|gif|GIF|heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEB
 app.static_route_exts(prefix="/", static_path=args.directory, exts="imgext")
 setup_toasts(app)
 
-reg_re_param("path_segments", r"[^\.]+")
-
 
 @rt("/image_element")
 async def get(session, gallery_path: str, resize_width: int | None = None):
     try:
-        # Use provided resize_width or fall back to the default
         if resize_width is None:
             resize_width = args.resize_max_width
         data_uri_src = await app_gallery.get_image_as_base64(
             gallery_path, resize_max_width=resize_width
         )
 
-        # Load metadata if available
         img_path = GALLERY_DIR / gallery_path
         metadata = get_image_metadata(img_path)
 
-        # Build the image display components
         return views.image_element(data_uri_src, metadata)
     except FileNotFoundError:
         return P(
@@ -204,18 +196,15 @@ async def post(session, action: str, gallery_path: str):
 
 
 def _gallery_page(
-    title: str,
     img_elems: list[FT],
     mode: views.GalleryMode = "default",
     resize_width: int | None = None,
 ) -> tuple[FT, FT]:
     # Get actual total count of images in gallery
     total_images = app_gallery.count_all_images()
-    # Determine current resize width for dropdown
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return views.gallery_page(
-        title,
         img_elems,
         gallery_dir=GALLERY_DIR,
         total_images=total_images,
@@ -226,34 +215,27 @@ def _gallery_page(
 
 @rt("/")
 def get(session, resize_width: int | None = None):
-    # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/?resize_width={args.resize_max_width}")
     img_elems = get_page_images(resize_width=resize_width)
-    return _gallery_page(
-        "gallery", img_elems, mode="default", resize_width=resize_width
-    )
+    return _gallery_page(img_elems, mode="default", resize_width=resize_width)
 
 
 @rt("/oldest")
 def get(session, resize_width: int | None = None):
-    # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/oldest?resize_width={args.resize_max_width}")
     img_elems = get_page_images(sort_order="oldest", resize_width=resize_width)
-    return _gallery_page("gallery", img_elems, mode="oldest", resize_width=resize_width)
+    return _gallery_page(img_elems, mode="oldest", resize_width=resize_width)
 
 
 @rt("/shuffled")
 def get(session, resize_width: int | None = None):
-    # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/shuffled?resize_width={args.resize_max_width}")
     img_elems = get_page_images(resize_width=resize_width)
     random.shuffle(img_elems)
-    return _gallery_page(
-        "gallery", img_elems, mode="shuffled", resize_width=resize_width
-    )
+    return _gallery_page(img_elems, mode="shuffled", resize_width=resize_width)
 
 
 def main() -> None:

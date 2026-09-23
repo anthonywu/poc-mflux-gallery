@@ -223,7 +223,6 @@ def gallery_controls() -> FT:
 
 
 def gallery_page(
-    title: str,
     img_elems: list[FT],
     *,
     gallery_dir: Path,
