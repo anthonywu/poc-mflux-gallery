@@ -1,77 +1,79 @@
 <!doctype html>
-<html>
+<html class="z-layout-small" lang="en">
   <head>
     <title><GALLERY></title>
     <link rel="canonical" href="https://testserver/shuffled?resize_width=32">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/surreal@main/surreal.js"></script><script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@anyblades/pico@latest/css/pico.min.css">
-    <style>sha256:0e199b640da3f7a8898568c7355d92c2da8a7efc2b0d1379b632e572d7bf0553</style>
-    <meta name="format-detection" content="telephone=no">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:a2a8d354532a71b8fb55e15eeab7b367fa60c8bc193bad4eeadf1de1a121fe29</script>    <style>sha256:d63f050ca66c477d71af7861f54d2a3099e9f41fad253714865056661fb04a66</style>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/surreal@main/surreal.js"></script><script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:0690fac0c3c6e90c72440223dccaef1916219737973fbd4adbae5ddb7856f142</script>    <style>sha256:dc890426ad4128782e0acc0fbfcadf1863de852d706f0d34d0d11050f5300e36</style>
     <style>sha256:6ec9872e19c644e89ca39396b2e13a85a6520f569252897b14d11c81f7449124</style>
 <script>sha256:783f6c3ff9033b6294eff594308b490ff850902bb77ed8c69c08b8562737d406</script>  </head>
   <body>
-    <div>
-      <div>
-<code style="font-size: 0.5em;"><GALLERY></code><sup id="photo-counter">3</sup>      </div>
-      <nav>
+    <div class="gallery-shell">
+      <div class="gallery-heading">
+        <div>
+<small class="eyebrow">MFLUX / IMAGE LIBRARY</small>          <h1>Gallery</h1>
+        </div>
+        <div class="gallery-location">
+<code><GALLERY></code><span class="image-count"><sup id="photo-counter">3</sup> images</span>        </div>
+      </div>
+      <nav aria-label="Gallery controls">
         <ul>
           <li>
-<a href="/?resize_width=32">Latest ▶️</a>          </li>
+<a href="/?resize_width=32" class="z-button z-button-ghost">Latest</a>          </li>
           <li>
-<a href="/oldest?resize_width=32">Oldest ◀️</a>          </li>
+<a href="/oldest?resize_width=32" class="z-button z-button-ghost">Oldest</a>          </li>
           <li>
-<a href="/shuffled?resize_width=32">Shuffled 🔀</a>          </li>
+<a href="/shuffled?resize_width=32" aria-current="page" class="z-button z-button-ghost">Shuffled</a>          </li>
           <li>
-<label for="resize-select" style="margin-right: 5px;">Max Width: </label><select name="resize_width" onchange="window.location.href = '/shuffled?resize_width=' + this.value" id="resize-select"><option value="256">256px</option><option value="512">512px</option><option value="768">768px</option><option value="1024">1024px</option></select>          </li>
+<label for="resize-select" style="margin-right: 5px;">Max Width: </label><select name="resize_width" onchange="window.location.href = '/shuffled?resize_width=' + this.value" id="resize-select" class="z-select"><option value="256">256px</option><option value="512">512px</option><option value="768">768px</option><option value="1024">1024px</option></select>          </li>
           <li>
-<button onclick="toggleTheme()" class="theme-toggle" title="Toggle dark/light mode">🌙</button>          </li>
+<button aria-label="Toggle dark/light mode" onclick="toggleTheme()" class="z-button z-button-default theme-toggle" title="Toggle dark/light mode">🌙</button>          </li>
         </ul>
       </nav>
-<swiper-container keyboard-enabled lazy-preload-prev-next speed="100" zoom><swiper-slide lazy id="slide-1"><details open id="container-image-2"><summary><mark><small>2 / of batch size 2 / total: 3</small></mark><small>2 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "middle.JPG", "resize_width": 32}' id="lazy-image-2">
+<swiper-container keyboard-enabled lazy-preload-prev-next speed="100" zoom><swiper-slide lazy id="slide-1"><details open id="container-image-2" class="image-card z-card"><summary><mark><small>2 / of batch size 2 / total: 3</small></mark><small>2 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "middle.JPG", "resize_width": 32}' id="lazy-image-2">
               <div class="skeleton-container">
                 <div class="skeleton-loader"></div>
 <small class="skeleton-text short"></small>              </div>
             </div>
-            <div>
-              <p class="image-path-label">📂 middle.JPG</p>
-            </div>
-            <div class="grid image-actions" style="margin-top: 10px;">
+            <div class="image-filename">
+<button type="button" data-filename="middle.JPG" aria-label="Copy filename to clipboard" class="copy-filename"><span class="image-path-label">middle.JPG</span><span aria-live="polite" class="copy-hint">Copy filename</span></button>            </div>
+            <div class="image-actions">
               <div></div>
               <div hx-swap="none">
-<form hx-post="/image_action"><button type="submit" class="secondary show-in-finder" style="width: 100%;">🔍 Show in Finder <kbd>f</kbd></button>                  <input type="hidden" name="gallery_path" value="middle.JPG">
+<form hx-post="/image_action"><button type="submit" class="z-button z-button-default show-in-finder" style="width: 100%;">Show in Finder <kbd>f</kbd></button>                  <input type="hidden" name="gallery_path" value="middle.JPG">
                   <input type="hidden" name="action" value="show-in-finder">
 </form>              </div>
               <div>
-<form hx-post="/image_action" hx-swap="outerHTML" hx-target="#slide-2"><button type="submit" class="contrast delete-image" style="width: 100%;">🔥 Delete <kbd>d</kbd></button>                  <input type="hidden" name="gallery_path" value="middle.JPG">
+<form hx-post="/image_action" hx-swap="outerHTML" hx-target="#slide-2"><button type="submit" class="z-button z-button-default delete-image" style="width: 100%;">Delete <kbd>d</kbd></button>                  <input type="hidden" name="gallery_path" value="middle.JPG">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="slide_delete_index" value="2">
 </form>              </div>
             </div>
-</details></swiper-slide><swiper-slide lazy id="slide-2"><details open id="container-image-1"><summary><mark><small>1 / of batch size 2 / total: 3</small></mark><small>1 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "new.JPG", "resize_width": 32}' id="lazy-image-1">
+</details></swiper-slide><swiper-slide lazy id="slide-2"><details open id="container-image-1" class="image-card z-card"><summary><mark><small>1 / of batch size 2 / total: 3</small></mark><small>1 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "new.JPG", "resize_width": 32}' id="lazy-image-1">
               <div class="skeleton-container">
                 <div class="skeleton-loader"></div>
 <small class="skeleton-text short"></small>              </div>
             </div>
-            <div>
-              <p class="image-path-label">📂 new.JPG</p>
-            </div>
-            <div class="grid image-actions" style="margin-top: 10px;">
+            <div class="image-filename">
+<button type="button" data-filename="new.JPG" aria-label="Copy filename to clipboard" class="copy-filename"><span class="image-path-label">new.JPG</span><span aria-live="polite" class="copy-hint">Copy filename</span></button>            </div>
+            <div class="image-actions">
               <div></div>
               <div hx-swap="none">
-<form hx-post="/image_action"><button type="submit" class="secondary show-in-finder" style="width: 100%;">🔍 Show in Finder <kbd>f</kbd></button>                  <input type="hidden" name="gallery_path" value="new.JPG">
+<form hx-post="/image_action"><button type="submit" class="z-button z-button-default show-in-finder" style="width: 100%;">Show in Finder <kbd>f</kbd></button>                  <input type="hidden" name="gallery_path" value="new.JPG">
                   <input type="hidden" name="action" value="show-in-finder">
 </form>              </div>
               <div>
-<form hx-post="/image_action" hx-swap="outerHTML" hx-target="#slide-1"><button type="submit" class="contrast delete-image" style="width: 100%;">🔥 Delete <kbd>d</kbd></button>                  <input type="hidden" name="gallery_path" value="new.JPG">
+<form hx-post="/image_action" hx-swap="outerHTML" hx-target="#slide-1"><button type="submit" class="z-button z-button-default delete-image" style="width: 100%;">Delete <kbd>d</kbd></button>                  <input type="hidden" name="gallery_path" value="new.JPG">
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="slide_delete_index" value="1">
 </form>              </div>
             </div>
 </details></swiper-slide></swiper-container>      <footer>
         <div id="mobile-controls">
-<button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));" class="secondary" style="min-width: 80px;">⏪ -10</button><button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));" class="secondary" style="min-width: 80px;">+10 ⏩</button>        </div>
+<button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));" class="z-button z-button-default" style="min-width: 80px;">← 10</button><button onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));" class="z-button z-button-default" style="min-width: 80px;">10 →</button>        </div>
 <details id="keyboard-controls"><summary>            <h4>Keyboard Controls ('h' to toggle)</h4>
 </summary>          <div id="keyboard-controls-hotkey-list">
             <ul>

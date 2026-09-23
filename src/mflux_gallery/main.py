@@ -8,6 +8,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from fasthtml.components import (
+    Link,
     Meta,
     P,
     Sup,
@@ -40,6 +41,10 @@ def _headers() -> tuple[FT, ...]:
     )
     return (
         Meta(name="format-detection", content="telephone=no"),
+        Link(
+            rel="stylesheet",
+            href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css",
+        ),
         jquery_js,
         swiper_js,
         custom_handlers,
@@ -230,6 +235,8 @@ def create_app(config: AppConfig) -> FastHTML:
     )
     app, _ = fast_app(
         hdrs=_headers(),
+        pico=False,
+        htmlkw={"class": "z-layout-small", "lang": "en"},
         static_path=config.directory,
         key_fname=str(config.directory / ".sesskey"),
         live=config.debug,
