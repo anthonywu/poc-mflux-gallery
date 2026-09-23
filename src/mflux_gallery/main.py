@@ -1065,7 +1065,7 @@ def get(session, resize_width: int = None):
 def main():
     print(f"Port: {args.port}")
     print(f"Delete Mode: {args.delete_mode}")
-    serve(host=args.host, port=args.port, reload=args.debug)
+    serve(appname="mflux_gallery.main", host=args.host, port=args.port, reload=args.debug)
 
 
 if __name__ == "__main__":

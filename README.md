@@ -28,6 +28,16 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 
 ## Installation
 
+Requires Python 3.10–3.15. Python 3.15 support is currently tested with
+3.15.0rc2; older alphas such as 3.15.0a7 are incompatible with current
+CPython 3.15 binary wheels (including Cython's build-time wheel).
+
+The image dependencies use `pillow>=12.3,<13` and `pillow-heif>=1.6,<2`,
+which provide Python 3.15 wheels while retaining Python 3.10 support.
+FastHTML and Rich retain their existing ranges. On Python 3.15, FastHTML's
+Uvicorn dependencies currently build PyYAML, httptools, and uvloop from
+source on Linux, so a C compiler and build tools are required.
+
 ### Option 1: Install as a CLI tool with uv
 
 You can install mflux-gallery directly as a command-line tool using `uv`:
@@ -47,13 +57,22 @@ mflux-gallery /path/to/images
 git clone https://github.com/anthonywu/poc-mflux-gallery.git mflux-gallery
 cd mflux-gallery
 
-# Create virtual environment and install dependencies with uv
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Install a recent Python 3.15 using the latest uv download catalog
+uvx uv@latest python install 3.15.0rc2
 
-# Install the package in development mode
-uv pip install -e .
+# Create the environment and install the locked dependencies
+uv sync --python 3.15.0rc2 --locked
 ```
+
+The explicit interpreter version avoids selecting an older installed 3.15
+alpha. For stable Python, use `uv sync --python 3.14 --locked` instead.
+If upgrading from an alpha leaves a native-extension ABI warning, rebuild
+the affected cached package, for example:
+`uv sync --python 3.15.0rc2 --locked --no-cache --reinstall-package httptools`.
+
+Run compatibility smoke tests with `uv run --no-sync python -m unittest discover -s tests -v`.
+These use synthetic images to check discovery, image codecs, resizing, and
+the gallery routes.
 
 ## Usage
 
@@ -66,7 +85,7 @@ mflux-gallery /path/to/images [OPTIONS]
 ### If running from source:
 
 ```bash
-python -m mflux_gallery.main /path/to/images [OPTIONS]
+uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 ```
 
 ### Command Line Options
