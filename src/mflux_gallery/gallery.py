@@ -113,20 +113,19 @@ class Gallery:
         self, gallery_path: str | Path, delete_other_suffixes: list[str] | None = None
     ) -> tuple[Path, bool]:
         target = await self.resolve_target(gallery_path)
-        if target.exists():
+        try:
+            if not target.exists():
+                return target, False
             target.unlink()
             if delete_other_suffixes:
                 for suffix in delete_other_suffixes:
                     target_suf = target.with_suffix(suffix)
                     if target_suf.exists():
                         target_suf.unlink()
-            # Decrement cache if valid, otherwise invalidate
-            if self._count_cache is not None:
-                self._count_cache -= 1
-            else:
-                self.invalidate_count_cache()
             return target, True
-        return target, False
+        finally:
+            # Missing files and partial failures can also make the cached count stale.
+            self.invalidate_count_cache()
 
     async def show_in_finder(
         self, gallery_path: str | Path
