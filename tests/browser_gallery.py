@@ -60,6 +60,13 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.addCleanup(self.browser.close)
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 900})
+        self.thumbnail_requests = []
+        self.page.on(
+            "request",
+            lambda request: self.thumbnail_requests.append(request.url)
+            if "/thumbnail?" in request.url
+            else None,
+        )
         self.image_requests = []
         self.page.on(
             "request",
@@ -82,6 +89,29 @@ class GalleryBrowserTests(unittest.TestCase):
             "(el, i) => el.swiper.slideTo(i, 0)", index
         )
         self.page.wait_for_timeout(100)
+
+    def test_filmstrip_is_optional_and_bounded(self):
+        for i in range(5, 20):
+            Image.new("RGB", (64, 64), "blue").save(self.root / f"image-{i}.jpg")
+        self.page.reload()
+        expect(self.page.locator(".swiper-slide-active img")).to_be_visible()
+        self.assertEqual(self.thumbnail_requests, [])
+        toggle = self.page.locator('[data-action="filmstrip"]')
+        toggle.click()
+        expect(self.page.locator("#filmstrip-items button")).to_have_count(9)
+        self.page.wait_for_function(
+            "document.querySelector('#filmstrip-items img')?.naturalWidth > 0"
+        )
+        self.assertLessEqual(len(self.thumbnail_requests), 9)
+        self.page.locator("#filmstrip-items button").nth(3).click()
+        expect(self.page.locator("#slide-position")).to_have_text("4 of 20")
+        self.page.get_by_role("button", name="Next thumbnail group", exact=True).click()
+        expect(self.page.locator("#slide-position")).to_have_text("13 of 20")
+        expect(self.page.locator("#filmstrip-items button")).to_have_count(9)
+        toggle.click()
+        expect(self.page.locator("#filmstrip-items img")).to_have_count(0)
+        expect(self.page.locator("#filmstrip")).to_be_hidden()
+        self.assertEqual(self.errors, [])
 
     def test_loading_is_bounded_and_retry_recovers(self):
         expect(self.page.locator(".image-loader[data-loaded]")).to_have_count(2)

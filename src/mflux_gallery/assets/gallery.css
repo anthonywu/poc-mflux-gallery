@@ -455,3 +455,13 @@
 @layer styles {
   .image-load-error { height: var(--stage-height); display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--z-muted-f); }
 }
+
+@layer styles {
+  #filmstrip { display: flex; align-items: center; gap: 4px; margin: 12px 0; }
+  #filmstrip-items { display: flex; gap: 6px; overflow-x: auto; min-width: 0; padding: 4px; scrollbar-width: thin; }
+  #filmstrip-items button { flex: 0 0 96px; padding: 3px; border: 2px solid transparent; border-radius: 6px; background: var(--gallery-surface); }
+  #filmstrip-items button[aria-current="true"] { border-color: var(--z-bg-f); }
+  #filmstrip-items img { display: block; width: 86px; height: 65px; object-fit: contain; font-size: 10px; }
+  .focus-mode #filmstrip { display: none; }
+  @media (max-width: 480px) { .browse-controls { position: static; } }
+}
