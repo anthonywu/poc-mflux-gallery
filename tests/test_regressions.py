@@ -6,12 +6,10 @@ The asset bodies are checked separately using their pre-refactor SHA-256 hashes.
 
 import base64
 import hashlib
-import importlib
 import io
 import json
 import os
 import re
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,39 +18,19 @@ from unittest.mock import patch
 from PIL import Image
 from starlette.testclient import TestClient
 
+from mflux_gallery import main
 from mflux_gallery.cli import create_parser
+from mflux_gallery.config import AppConfig
 
 FIXTURES = Path(__file__).parent / "fixtures"
 NOW = 1_700_000_000
 
 
 class GalleryRegressionTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.directory = tempfile.TemporaryDirectory()
-        cls.addClassCleanup(cls.directory.cleanup)
-        cls.root = Path(cls.directory.name)
-        cwd = Path.cwd()
-        try:
-            with patch.object(
-                sys,
-                "argv",
-                [
-                    "mflux-gallery",
-                    str(cls.root),
-                    "--load-limit",
-                    "2",
-                    "--resize-max-width",
-                    "16",
-                ],
-            ):
-                cls.main = importlib.import_module("mflux_gallery.main")
-        finally:
-            os.chdir(cwd)
-
     def setUp(self):
-        for path in self.root.iterdir():
-            path.unlink()
+        directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.root = Path(directory)
+        self.main = main
         for index, name in enumerate(["old.JPG", "middle.JPG", "new.JPG"]):
             path = self.root / name
             Image.new("RGB", (64, 32), "blue").save(path)
@@ -66,8 +44,10 @@ class GalleryRegressionTests(unittest.TestCase):
                 }
             )
         )
-        self.main.app_gallery.invalidate_count_cache()
-        self.client = self.enterContext(TestClient(self.main.app))
+        self.app = main.create_app(
+            AppConfig(self.root, load_limit=2, resize_max_width=16)
+        )
+        self.client = self.enterContext(TestClient(self.app))
         self.enterContext(patch("time.time", return_value=NOW))
 
     def assert_snapshot(self, name, html):
@@ -149,7 +129,7 @@ class GalleryRegressionTests(unittest.TestCase):
         self.assertIn("missing.JPG is invalid path", response.text)
 
     def test_delete_sidecar_counter_and_htmx_event(self):
-        self.assertEqual(self.main.app_gallery.count_all_images(), 3)
+        self.assertEqual(self.app.state.gallery.count_all_images(), 3)
         for _ in range(2):  # Repeated deletion keeps the current missing-file behavior.
             response = self.client.post(
                 "/image_action",
@@ -164,7 +144,7 @@ class GalleryRegressionTests(unittest.TestCase):
             self.assert_snapshot("delete.html", response.text)
             self.assertFalse((self.root / "new.JPG").exists())
             self.assertFalse((self.root / "new.json").exists())
-            self.assertEqual(self.main.app_gallery.count_all_images(), 2)
+            self.assertEqual(self.app.state.gallery.count_all_images(), 2)
 
     def test_action_errors_and_finder_notifications(self):
         for action, path in [("unknown", "new.JPG"), ("delete", "../outside.JPG")]:
