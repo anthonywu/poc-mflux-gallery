@@ -10,8 +10,9 @@ requires-python = ">=3.11,<3.16"
 dependencies = [
     "pillow-heif>=1.6,<2.0",
     "pillow>=12.3,<13",
-    "python-fasthtml>=0.12,<1.0",
+    "python-fasthtml>=0.14.13,<1.0",
     "rich>=14.0,<15.0",
+    "starlette>=1.6,<2.0",
 ]
 
 [project.scripts]
