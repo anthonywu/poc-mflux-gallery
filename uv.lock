@@ -189,14 +189,16 @@ dependencies = [
     { name = "pillow-heif" },
     { name = "python-fasthtml" },
     { name = "rich" },
+    { name = "starlette" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pillow", specifier = ">=12.3,<13" },
     { name = "pillow-heif", specifier = ">=1.6,<2.0" },
-    { name = "python-fasthtml", specifier = ">=0.12,<1.0" },
+    { name = "python-fasthtml", specifier = ">=0.14.13,<1.0" },
     { name = "rich", specifier = ">=14.0,<15.0" },
+    { name = "starlette", specifier = ">=1.6,<2.0" },
 ]
 
 [[package]]
