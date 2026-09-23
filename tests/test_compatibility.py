@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import io
-import os
 import socket
 import subprocess
 import sys
@@ -86,34 +85,18 @@ class CompatibilityTests(unittest.TestCase):
                 self.assertEqual(decoded.size, (16, 8))
 
     def test_gallery_routes(self):
-        # The CLI parses arguments and changes cwd on import; isolate it.
+        from starlette.testclient import TestClient
+
+        from mflux_gallery.config import AppConfig
+        from mflux_gallery.main import create_app
+
         with tempfile.TemporaryDirectory() as directory:
             Image.new("RGB", (32, 16), "blue").save(Path(directory) / "sample.JPG")
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-c",
-                    """
-import sys
-from starlette.testclient import TestClient
-sys.argv = ['mflux-gallery', sys.argv[1]]
-from mflux_gallery.main import app
-with TestClient(app) as client:
-    for path in ['/', '/oldest', '/shuffled']:
-        response = client.get(path)
-        assert response.status_code == 200, response.text
-        assert 'sample.JPG' in response.text, response.text
-""",
-                    directory,
-                ],
-                capture_output=True,
-                text=True,
-                env={
-                    **os.environ,
-                    "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
-                },
-            )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with TestClient(create_app(AppConfig(Path(directory)))) as client:
+                for path in ["/", "/oldest", "/shuffled"]:
+                    response = client.get(path)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn("sample.JPG", response.text)
 
 
 if __name__ == "__main__":

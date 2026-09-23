@@ -3,6 +3,7 @@ import os
 import random
 import time
 import typing as t
+from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from fasthtml.components import (
     P,
     Sup,
 )
-from fasthtml.core import FT, HtmxResponseHeaders, reg_re_param, serve
+from fasthtml.core import FT, FastHTML, HtmxResponseHeaders, reg_re_param, serve
 from fasthtml.fastapp import fast_app
 from fasthtml.toaster import add_toast, setup_toasts
 from fasthtml.xtend import Script, Style
@@ -19,39 +20,31 @@ from rich import print
 from starlette.responses import RedirectResponse, Response
 
 from . import cli, gallery, views
+from .config import AppConfig
 
-parser = cli.create_parser()
-args = parser.parse_args()
 
-GALLERY_DIR = args.directory.resolve()
+def _headers() -> tuple[FT, ...]:
+    swiper_js = Script(
+        src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
+    )
+    jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
-if not GALLERY_DIR.exists():
-    print(f"Error: Directory '{GALLERY_DIR}' does not exist.")
-    exit(1)
+    custom_handlers = Script(
+        files("mflux_gallery").joinpath("assets/gallery.js").read_text(encoding="utf-8")
+    )
 
-if not GALLERY_DIR.is_dir():
-    print(f"Error: '{GALLERY_DIR}' is not a directory.")
-    exit(1)
-
-try:
-    app_gallery = gallery.Gallery(GALLERY_DIR, resize_max_width=args.resize_max_width)
-    os.chdir(GALLERY_DIR)
-except (FileNotFoundError, PermissionError) as e:
-    print(f"Error accessing directory '{GALLERY_DIR}': {e}")
-    exit(1)
-
-swiper_js = Script(
-    src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
-)
-jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
-
-custom_handlers = Script(
-    files("mflux_gallery").joinpath("assets/gallery.js").read_text(encoding="utf-8")
-)
-
-custom_css = Style(
-    files("mflux_gallery").joinpath("assets/gallery.css").read_text(encoding="utf-8")
-)
+    custom_css = Style(
+        files("mflux_gallery")
+        .joinpath("assets/gallery.css")
+        .read_text(encoding="utf-8")
+    )
+    return (
+        Meta(name="format-detection", content="telephone=no"),
+        jquery_js,
+        swiper_js,
+        custom_handlers,
+        custom_css,
+    )
 
 
 def get_created_recency_description(path_st_mtime: float) -> str:
@@ -79,69 +72,37 @@ def get_image_metadata(img_path: Path) -> t.Any:
 
 
 def get_page_images(
+    app_gallery: gallery.Gallery,
+    config: AppConfig,
     sort_order: t.Literal["newest", "oldest"] = "newest",
     resize_width: int | None = None,
 ) -> list[FT]:
     reverse = sort_order == "newest"
     matches = sorted(
-        app_gallery, key=lambda path: path.stat().st_mtime, reverse=reverse
+        app_gallery.iter_all_images(),
+        key=lambda path: path.stat().st_mtime,
+        reverse=reverse,
     )
     if not matches:
-        print(f"No images found in {GALLERY_DIR}")
+        print(f"No images found in {config.directory}")
         return []
     tags = []
     for count, img_path in enumerate(matches, 1):
-        if count > args.load_limit:
+        if count > config.load_limit:
             break
-        gallery_path = str(img_path.relative_to(GALLERY_DIR))
+        gallery_path = str(img_path.relative_to(config.directory))
 
         tags.append(
             views.image_card(
                 gallery_path,
                 count=count,
-                load_limit=args.load_limit,
+                load_limit=config.load_limit,
                 total_matches=len(matches),
                 recency=get_created_recency_description(img_path.stat().st_mtime),
                 resize_width=resize_width,
             )
         )
     return tags
-
-
-app, rt = fast_app(
-    hdrs=(
-        Meta(name="format-detection", content="telephone=no"),
-        jquery_js,
-        swiper_js,
-        custom_handlers,
-        custom_css,
-    ),
-    static_path=args.directory,
-    live=args.debug,
-    debug=args.debug,
-)
-reg_re_param("imgext", "ico|gif|GIF|heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP")
-app.static_route_exts(prefix="/", static_path=args.directory, exts="imgext")
-setup_toasts(app)
-
-
-@rt("/image_element")
-async def get(session, gallery_path: str, resize_width: int | None = None):
-    try:
-        if resize_width is None:
-            resize_width = args.resize_max_width
-        data_uri_src = await app_gallery.get_image_as_base64(
-            gallery_path, resize_max_width=resize_width
-        )
-
-        img_path = GALLERY_DIR / gallery_path
-        metadata = get_image_metadata(img_path)
-
-        return views.image_element(data_uri_src, metadata)
-    except FileNotFoundError:
-        return P(
-            f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
-        )
 
 
 def log_notif(
@@ -155,95 +116,170 @@ def log_notif(
         add_toast(session, notif, **toast_kwargs)
 
 
-@rt("/image_action")
-async def post(session, action: str, gallery_path: str):
-    action = action.strip().lower()
-    if action not in ["delete", "show-in-finder"]:
-        return Response(f"{action=} not supported", status_code=403)
-
-    try:
-        if action == "delete":
-            target, success = await app_gallery.delete_item(
-                gallery_path, delete_other_suffixes=[".json"]
-            )
-            if success:
-                notif = f"Deleted {target.as_posix()!r}"
-                log_notif(session, notif, typ="success")
-            else:
-                notif = f"Does not exist: {target.as_posix()!r}"
-                log_notif(session, notif, typ="warning")
-
-            # Count remaining images (actual total, not load-limited)
-            remaining_images = app_gallery.count_all_images()
-
-            # Return empty response with trigger for slide removal, plus updated counter via OOB
-            return (
-                Sup(remaining_images, id="photo-counter", hx_swap_oob="true"),
-                HtmxResponseHeaders(trigger="delete-successful"),
-            )
-        elif action == "show-in-finder":
-            target, success, error_msg = await app_gallery.show_in_finder(gallery_path)
-            if success:
-                notif = f"Opened {target.as_posix()!r} in Finder."
-                log_notif(session, notif, send_toast=True, typ="success")
-                return Response(notif)
-            else:
-                notif = f"{error_msg}"
-                log_notif(session, notif, send_toast=True, typ="error")
-                return Response(notif, status_code=500)
-    except gallery.InvalidPathValueError:
-        return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
-
-
-def _gallery_page(
-    img_elems: list[FT],
-    mode: views.GalleryMode = "default",
-    resize_width: int | None = None,
-) -> tuple[FT, FT]:
-    # Get actual total count of images in gallery
-    total_images = app_gallery.count_all_images()
-    current_resize = resize_width if resize_width is not None else args.resize_max_width
-
+def gallery_page_response(
+    app_gallery: gallery.Gallery,
+    config: AppConfig,
+    mode: views.GalleryMode,
+    resize_width: int | None,
+) -> Response | tuple[FT, FT]:
+    if resize_width is None:
+        path = "/" if mode == "default" else f"/{mode}"
+        return RedirectResponse(f"{path}?resize_width={config.resize_max_width}")
+    sort_order = "oldest" if mode == "oldest" else "newest"
+    img_elems = get_page_images(
+        app_gallery, config, sort_order=sort_order, resize_width=resize_width
+    )
+    if mode == "shuffled":
+        random.shuffle(img_elems)
     return views.gallery_page(
         img_elems,
-        gallery_dir=GALLERY_DIR,
-        total_images=total_images,
-        current_resize=current_resize,
+        gallery_dir=config.directory,
+        total_images=app_gallery.count_all_images(),
+        current_resize=resize_width,
         mode=mode,
     )
 
 
-@rt("/")
-def get(session, resize_width: int | None = None):
-    if resize_width is None:
-        return RedirectResponse(f"/?resize_width={args.resize_max_width}")
-    img_elems = get_page_images(resize_width=resize_width)
-    return _gallery_page(img_elems, mode="default", resize_width=resize_width)
+def register_image_routes(
+    app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
+) -> None:
+    @app.route("/image_element")
+    async def get(session, gallery_path: str, resize_width: int | None = None):
+        try:
+            if resize_width is None:
+                resize_width = config.resize_max_width
+            data_uri_src = await app_gallery.get_image_as_base64(
+                gallery_path, resize_max_width=resize_width
+            )
+
+            img_path = config.directory / gallery_path
+            metadata = get_image_metadata(img_path)
+
+            return views.image_element(data_uri_src, metadata)
+        except FileNotFoundError:
+            return P(
+                f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
+            )
 
 
-@rt("/oldest")
-def get(session, resize_width: int | None = None):
-    if resize_width is None:
-        return RedirectResponse(f"/oldest?resize_width={args.resize_max_width}")
-    img_elems = get_page_images(sort_order="oldest", resize_width=resize_width)
-    return _gallery_page(img_elems, mode="oldest", resize_width=resize_width)
+def register_action_routes(
+    app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
+) -> None:
+    @app.route("/image_action")
+    async def post(session, action: str, gallery_path: str):
+        action = action.strip().lower()
+        if action not in ["delete", "show-in-finder"]:
+            return Response(f"{action=} not supported", status_code=403)
+
+        try:
+            if action == "delete":
+                target, success = await app_gallery.delete_item(
+                    gallery_path, delete_other_suffixes=[".json"]
+                )
+                if success:
+                    notif = f"Deleted {target.as_posix()!r}"
+                    log_notif(session, notif, typ="success")
+                else:
+                    notif = f"Does not exist: {target.as_posix()!r}"
+                    log_notif(session, notif, typ="warning")
+
+                # Count remaining images (actual total, not load-limited)
+                remaining_images = app_gallery.count_all_images()
+
+                # Return empty response with trigger for slide removal, plus updated counter via OOB
+                return (
+                    Sup(remaining_images, id="photo-counter", hx_swap_oob="true"),
+                    HtmxResponseHeaders(trigger="delete-successful"),
+                )
+            elif action == "show-in-finder":
+                target, success, error_msg = await app_gallery.show_in_finder(
+                    gallery_path
+                )
+                if success:
+                    notif = f"Opened {target.as_posix()!r} in Finder."
+                    log_notif(session, notif, send_toast=True, typ="success")
+                    return Response(notif)
+                else:
+                    notif = f"{error_msg}"
+                    log_notif(session, notif, send_toast=True, typ="error")
+                    return Response(notif, status_code=500)
+        except gallery.InvalidPathValueError:
+            return Response(f"cannot jailbreak to {gallery_path}", status_code=403)
 
 
-@rt("/shuffled")
-def get(session, resize_width: int | None = None):
-    if resize_width is None:
-        return RedirectResponse(f"/shuffled?resize_width={args.resize_max_width}")
-    img_elems = get_page_images(resize_width=resize_width)
-    random.shuffle(img_elems)
-    return _gallery_page(img_elems, mode="shuffled", resize_width=resize_width)
+def register_page_routes(
+    app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
+) -> None:
+    @app.route("/")
+    def get(session, resize_width: int | None = None):
+        return gallery_page_response(app_gallery, config, "default", resize_width)
+
+    @app.route("/oldest")
+    def get(session, resize_width: int | None = None):
+        return gallery_page_response(app_gallery, config, "oldest", resize_width)
+
+    @app.route("/shuffled")
+    def get(session, resize_width: int | None = None):
+        return gallery_page_response(app_gallery, config, "shuffled", resize_width)
+
+
+def create_app(config: AppConfig) -> FastHTML:
+    """Build an independent gallery application without changing process state."""
+    app_gallery = gallery.Gallery(
+        config.directory, resize_max_width=config.resize_max_width
+    )
+    app, _ = fast_app(
+        hdrs=_headers(),
+        static_path=config.directory,
+        key_fname=str(config.directory / ".sesskey"),
+        live=config.debug,
+        debug=config.debug,
+    )
+    reg_re_param("imgext", "ico|gif|GIF|heic|HEIC|jpg|JPG|jpeg|JPEG|png|PNG|webp|WEBP")
+    app.static_route_exts(prefix="/", static_path=config.directory, exts="imgext")
+    setup_toasts(app)
+    app.state.gallery = app_gallery
+    app.state.config = config
+    register_image_routes(app, config, app_gallery)
+    register_action_routes(app, config, app_gallery)
+    register_page_routes(app, config, app_gallery)
+    return app
+
+
+_CONFIG_ENV = "MFLUX_GALLERY_CONFIG"
+
+
+def _create_cli_app() -> FastHTML:
+    """Uvicorn factory: reload workers inherit the CLI's resolved configuration."""
+    return create_app(AppConfig(**json.loads(os.environ[_CONFIG_ENV])))
 
 
 def main() -> None:
-    print(f"Port: {args.port}")
-    print(f"Delete Mode: {args.delete_mode}")
-    serve(
-        appname="mflux_gallery.main", host=args.host, port=args.port, reload=args.debug
-    )
+    args = cli.create_parser().parse_args()
+    try:
+        config = AppConfig(**vars(args))
+    except (OSError, ValueError) as error:
+        print(f"Error: {error}")
+        raise SystemExit(1) from error
+    print(f"Port: {config.port}")
+    print(f"Delete Mode: {config.delete_mode}")
+    previous_config = os.environ.get(_CONFIG_ENV)
+    os.environ[_CONFIG_ENV] = json.dumps(asdict(config), default=str)
+    try:
+        serve(
+            appname="mflux_gallery.main",
+            app="_create_cli_app",
+            factory=True,
+            host=config.host,
+            port=config.port,
+            reload=config.debug,
+            reload_dirs=[str(config.directory)] if config.debug else None,
+        )
+    finally:
+        if previous_config is None:
+            os.environ.pop(_CONFIG_ENV, None)
+        else:
+            os.environ[_CONFIG_ENV] = previous_config
 
 
 if __name__ == "__main__":
