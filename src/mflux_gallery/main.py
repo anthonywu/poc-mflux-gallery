@@ -79,7 +79,9 @@ def get_page_images(
 ) -> list[FT]:
     reverse = sort_order == "newest"
     matches = sorted(
-        app_gallery, key=lambda path: path.stat().st_mtime, reverse=reverse
+        app_gallery.iter_all_images(),
+        key=lambda path: path.stat().st_mtime,
+        reverse=reverse,
     )
     if not matches:
         print(f"No images found in {config.directory}")
@@ -256,7 +258,7 @@ def main() -> None:
     args = cli.create_parser().parse_args()
     try:
         config = AppConfig(**vars(args))
-    except OSError as error:
+    except (OSError, ValueError) as error:
         print(f"Error: {error}")
         raise SystemExit(1) from error
     print(f"Port: {config.port}")

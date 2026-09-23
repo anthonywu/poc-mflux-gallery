@@ -82,7 +82,7 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 | `--host` | Host address to bind server | 0.0.0.0 |
 | `--port` | Port number for the server | 9000 |
 | `--delete-mode` | How to handle deletion ("trash" or "permanent") | permanent |
-| `--load-limit` | Maximum number of images to load | 1000 |
+| `--load-limit` | Maximum number of images to display after sorting (0 displays none) | 100 |
 | `--debug` | Enable debug mode (verbose output, live reload) | False |
 | `--resize-max-width` | Maximum width for resizing gallery images | 512 |
 

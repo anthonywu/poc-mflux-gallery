@@ -16,6 +16,8 @@ class AppConfig:
     resize_max_width: int = 512
 
     def __post_init__(self) -> None:
+        if self.load_limit < 0:
+            raise ValueError("load_limit must be non-negative")
         directory = Path(self.directory).resolve()
         if not directory.exists():
             raise FileNotFoundError(f"Directory '{directory}' does not exist.")

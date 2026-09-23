@@ -3,6 +3,7 @@ import io
 import subprocess
 import time
 from collections.abc import Iterator
+from itertools import islice
 from pathlib import Path
 
 from PIL import Image
@@ -25,6 +26,8 @@ class Gallery:
         resize_max_width: int = 512,
         load_limit: int = 1000,
     ) -> None:
+        if load_limit < 0:
+            raise ValueError("load_limit must be non-negative")
         self.gallery_dir = gallery_dir
         self.photo_suffixes = photo_suffixes
         self.resize_max_width = resize_max_width
@@ -34,12 +37,12 @@ class Gallery:
         self._cache_duration = 60  # Cache for 1 minute
 
     def __iter__(self) -> Iterator[Path]:
-        count = 0
+        return islice(self.iter_all_images(), self.load_limit)
+
+    def iter_all_images(self) -> Iterator[Path]:
+        """Discover all candidates so callers can sort before applying a limit."""
         for suffix in self.photo_suffixes:
-            for path in self._paths_with_suffix(suffix):
-                if count <= self.load_limit:
-                    yield path
-                count += 1
+            yield from self._paths_with_suffix(suffix)
 
     def _paths_with_suffix(self, suffix: str) -> Iterator[Path]:
         # Path.rglob(case_sensitive=...) requires Python 3.12.
