@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import sys
 import time
 import typing as t
 from dataclasses import asdict
@@ -23,12 +24,13 @@ from starlette.responses import RedirectResponse, Response
 from . import cli, gallery, views
 from .config import AppConfig
 
+FINDER_AVAILABLE = sys.platform == "darwin"
+
 
 def _headers() -> tuple[FT, ...]:
     swiper_js = Script(
         src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"
     )
-    jquery_js = Script(src="https://code.jquery.com/jquery-3.7.1.min.js")
 
     custom_handlers = Script(
         files("mflux_gallery").joinpath("assets/gallery.js").read_text(encoding="utf-8")
@@ -45,7 +47,6 @@ def _headers() -> tuple[FT, ...]:
             rel="stylesheet",
             href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css",
         ),
-        jquery_js,
         swiper_js,
         custom_handlers,
         custom_css,
@@ -104,6 +105,7 @@ def get_page_images(
                 load_limit=config.load_limit,
                 total_matches=len(matches),
                 recency=get_created_recency_description(img_path.stat().st_mtime),
+                finder_available=FINDER_AVAILABLE,
                 resize_width=resize_width,
             )
         )
@@ -142,6 +144,7 @@ def gallery_page_response(
         total_images=app_gallery.count_all_images(),
         current_resize=resize_width,
         mode=mode,
+        finder_available=FINDER_AVAILABLE,
     )
 
 
@@ -166,6 +169,20 @@ def register_image_routes(
                 f"{gallery_path} is invalid path, does not exist, or has been previously deleted"
             )
 
+    @app.route("/thumbnail")
+    async def thumbnail(gallery_path: str):
+        try:
+            data = await app_gallery.get_thumbnail(gallery_path)
+        except gallery.InvalidPathValueError:
+            return Response("Invalid image path", status_code=403)
+        except OSError:
+            return Response("Image unavailable", status_code=404)
+        return Response(
+            data,
+            media_type="image/webp",
+            headers={"Cache-Control": "private, max-age=60"},
+        )
+
 
 def register_action_routes(
     app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
@@ -175,6 +192,9 @@ def register_action_routes(
         action = action.strip().lower()
         if action not in ["delete", "show-in-finder"]:
             return Response(f"{action=} not supported", status_code=403)
+
+        if action == "show-in-finder" and not FINDER_AVAILABLE:
+            return Response("Finder is only available on macOS", status_code=403)
 
         try:
             if action == "delete":

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import io
 import subprocess
@@ -10,6 +11,15 @@ from PIL import Image
 from pillow_heif import register_heif_opener
 
 register_heif_opener()
+
+
+def thumbnail_bytes(path: Path) -> bytes:
+    """Decode only on demand; constrain both dimensions of the response."""
+    with Image.open(path) as image:
+        image.thumbnail((128, 96), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        image.save(buffer, format="WEBP", quality=65)
+        return buffer.getvalue()
 
 
 class InvalidPathValueError(ValueError):
@@ -99,6 +109,10 @@ class Gallery:
             img_bytes = buffer.getvalue()
         base64_str = base64.b64encode(img_bytes).decode("utf-8")
         return f"data:image/{format.lower()};base64,{base64_str}"
+
+    async def get_thumbnail(self, gallery_path: str) -> bytes:
+        target = await self.resolve_target(gallery_path)
+        return await asyncio.to_thread(thumbnail_bytes, target)
 
     async def resolve_target(self, gallery_path: str | Path) -> Path:
         try:

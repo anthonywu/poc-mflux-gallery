@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlencode
 
 from fasthtml.components import (
     H1,
@@ -37,7 +38,9 @@ from fasthtml.core import FT
 GalleryMode = Literal["default", "shuffled", "oldest"]
 
 
-def image_actions(gallery_path: str, count: int) -> FT:
+def image_actions(
+    gallery_path: str, count: int, *, finder_available: bool = False
+) -> FT:
     return Div(cls="image-actions")(
         Div(),
         Div(
@@ -53,7 +56,9 @@ def image_actions(gallery_path: str, count: int) -> FT:
                 Input(type="hidden", name="action", value="show-in-finder"),
             ),
             hx_swap="none",
-        ),
+        )
+        if finder_available
+        else None,
         Div(
             Form(hx_post="/image_action")(
                 Button(
@@ -66,7 +71,7 @@ def image_actions(gallery_path: str, count: int) -> FT:
                 Input(type="hidden", name="gallery_path", value=gallery_path),
                 Input(type="hidden", name="action", value="delete"),
                 Input(type="hidden", name="slide_delete_index", value=str(count)),
-                hx_swap="outerHTML",
+                hx_swap="none",
                 hx_target=f"#slide-{count}",
             )
         ),
@@ -80,11 +85,12 @@ def image_card(
     load_limit: int,
     total_matches: int,
     recency: str,
+    finder_available: bool = False,
     resize_width: int | None = None,
 ) -> FT:
-    hx_vals = {"gallery_path": gallery_path}
+    image_params = {"gallery_path": gallery_path}
     if resize_width is not None:
-        hx_vals["resize_width"] = resize_width
+        image_params["resize_width"] = resize_width
     return Details(
         Summary(
             Mark(
@@ -94,10 +100,9 @@ def image_card(
         ),
         Div(
             id=f"lazy-image-{count}",
-            hx_trigger="intersect once throttle:2s",
-            hx_get="/image_element",
-            hx_vals=hx_vals,
-            hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
+            cls="image-loader",
+            data_image_url="/image_element?" + urlencode(image_params),
+            aria_busy="true",
         )(
             Div(cls="skeleton-container")(
                 Div(cls="skeleton-loader"), Small(cls="skeleton-text short")
@@ -114,7 +119,7 @@ def image_card(
             ),
             cls="image-filename",
         ),
-        image_actions(gallery_path, count),
+        image_actions(gallery_path, count, finder_available=finder_available),
         cls="image-card z-card",
         id=f"container-image-{count}",
         open=True,
@@ -122,30 +127,39 @@ def image_card(
 
 
 def metadata_panel(metadata: dict[str, Any]) -> FT:
-    metadata_components = [
-        Div(
-            Strong("Prompt: "),
-            Code(metadata.get("prompt", "n/a"), style="white-space: pre-wrap;"),
-            style="margin-top: 10px;",
-        )
-    ]
+    fields = (
+        ("guidance", "Guidance"),
+        ("steps", "Steps"),
+        ("seed", "Seed"),
+        ("model", "Model"),
+    )
     return Details(
-        Summary(
-            "Metadata (",
-            Strong("Guidance: "),
-            metadata.get("guidance", "n/a"),
-            " / ",
-            Strong("Steps: "),
-            metadata.get("steps", "n/a"),
-            ")",
-            style="cursor: pointer; font-weight: bold;",
+        Summary("Image details", Span(" · prompt & settings", cls="metadata-hint")),
+        Div(
+            *[
+                Span(
+                    Span(label, cls="metadata-key"),
+                    " ",
+                    str(metadata[key]),
+                    cls="metadata-value",
+                )
+                for key, label in fields
+                if key in metadata
+            ],
+            cls="metadata-values",
         ),
         Div(
-            *metadata_components,
-            style="padding: 10px; border-radius: 5px; margin-top: 10px;",
+            Strong("Prompt"),
+            Button(
+                "Copy prompt",
+                type="button",
+                cls="z-button z-button-ghost copy-prompt",
+                aria_live="polite",
+            ),
+            cls="prompt-heading",
         ),
+        Code(str(metadata.get("prompt", "n/a")), cls="prompt-text"),
         cls="metadata-section",
-        style="margin-top: 10px;",
     )
 
 
@@ -173,6 +187,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Latest",
+                    Kbd("A", cls="nav-shortcut"),
+                    aria_keyshortcuts="a",
                     href=f"/?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "default" else None,
@@ -181,6 +197,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Oldest",
+                    Kbd("Z", cls="nav-shortcut"),
+                    aria_keyshortcuts="z",
                     href=f"/oldest?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "oldest" else None,
@@ -189,6 +207,8 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
             Li(
                 A(
                     "Shuffled",
+                    Kbd("S", cls="nav-shortcut"),
+                    aria_keyshortcuts="s",
                     href=f"/shuffled?resize_width={current_resize}",
                     cls="z-button z-button-ghost",
                     aria_current="page" if mode == "shuffled" else None,
@@ -200,12 +220,14 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
                     id="resize-select",
                     name="resize_width",
                     cls="z-select",
+                    title="Max width: 1 = 256px, 2 = 512px, 3 = 768px, 4 = 1024px",
+                    aria_keyshortcuts="1 2 3 4",
                     onchange=f"window.location.href = '{('/' if mode == 'default' else '/' + mode)}?resize_width=' + this.value",
                 )(
-                    Option("256px", value="256", selected=current_resize == 256),
-                    Option("512px", value="512", selected=current_resize == 512),
-                    Option("768px", value="768", selected=current_resize == 768),
-                    Option("1024px", value="1024", selected=current_resize == 1024),
+                    Option("256px · 1", value="256", selected=current_resize == 256),
+                    Option("512px · 2", value="512", selected=current_resize == 512),
+                    Option("768px · 3", value="768", selected=current_resize == 768),
+                    Option("1024px · 4", value="1024", selected=current_resize == 1024),
                 ),
             ),
             Li()(
@@ -221,22 +243,65 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
     )
 
 
-def gallery_controls() -> FT:
-    return Footer(
-        Div(id="mobile-controls")(
-            Button(
-                "← 10",
-                onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));",
-                cls="z-button z-button-default",
-                style="min-width: 80px;",
-            ),
-            Button(
-                "10 →",
-                onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));",
-                cls="z-button z-button-default",
-                style="min-width: 80px;",
-            ),
+def browse_controls() -> FT:
+    return Div(
+        Button(
+            "←",
+            type="button",
+            data_step="-1",
+            aria_label="Previous image",
+            title="Previous image (p)",
+            cls="z-button z-button-default",
         ),
+        Button(
+            "−10",
+            type="button",
+            data_step="-10",
+            aria_label="Back ten images",
+            title="Back ten (j)",
+            cls="z-button z-button-ghost jump-control",
+        ),
+        Span("0 of 0", id="slide-position", role="status", aria_live="polite"),
+        Button(
+            "+10",
+            type="button",
+            data_step="10",
+            aria_label="Forward ten images",
+            title="Forward ten (k)",
+            cls="z-button z-button-ghost jump-control",
+        ),
+        Button(
+            "→",
+            type="button",
+            data_step="1",
+            aria_label="Next image",
+            title="Next image (n)",
+            cls="z-button z-button-default",
+        ),
+        Button(
+            "Focus",
+            type="button",
+            data_action="focus",
+            aria_pressed="false",
+            title="Focus mode (v); Escape to exit",
+            cls="z-button z-button-ghost",
+        ),
+        Button(
+            "Thumbnails",
+            type="button",
+            data_action="filmstrip",
+            aria_expanded="false",
+            aria_controls="filmstrip",
+            cls="z-button z-button-ghost",
+        ),
+        cls="browse-controls",
+        role="group",
+        aria_label="Image navigation",
+    )
+
+
+def gallery_controls(*, finder_available: bool = False) -> FT:
+    return Footer(
         Details(id="keyboard-controls")(
             Summary(H4("Keyboard Controls ('h' to toggle)")),
             Div(id="keyboard-controls-hotkey-list")(
@@ -245,11 +310,14 @@ def gallery_controls() -> FT:
                     Li(Kbd("p"), Span("Previous image")),
                     Li(Kbd("j"), Span("Jump back 10 slides")),
                     Li(Kbd("k"), Span("Jump forward 10 slides")),
-                    Li(Kbd("a"), Span("Go to first slide")),
+                    Li(Kbd("Home"), Span("Go to first slide")),
+                    Li(Kbd("A / Z / S"), Span("Latest / Oldest / Shuffled")),
                     Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
-                    Li(Kbd("f"), Span("Show in Finder")),
+                    Li(Kbd("f"), Span("Show in Finder")) if finder_available else None,
                     Li(Kbd("m"), Span("Toggle metadata visibility")),
+                    Li(Kbd("v"), Span("Focus mode; Escape to exit")),
+                    Li(Kbd("1–4"), Span("Change image resolution")),
                 )
             ),
         ),
@@ -263,6 +331,7 @@ def gallery_page(
     total_images: int,
     current_resize: int,
     mode: GalleryMode = "default",
+    finder_available: bool = False,
 ) -> tuple[FT, FT]:
     return (
         Title(gallery_dir),
@@ -270,7 +339,7 @@ def gallery_page(
             Div(
                 Div(Small("MFLUX / IMAGE LIBRARY", cls="eyebrow"), H1("Gallery")),
                 Div(
-                    Code(gallery_dir),
+                    Code(gallery_dir, title=str(gallery_dir)),
                     Span(
                         Sup(total_images, id="photo-counter"),
                         " images",
@@ -281,20 +350,41 @@ def gallery_page(
                 cls="gallery-heading",
             ),
             gallery_navigation(mode, current_resize),
+            browse_controls(),
             Swiper_Container(
                 *[
                     Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
                     for i, elem in enumerate(img_elems, 1)
                 ],
                 keyboard_enabled=True,
-                lazy_preload_prev_next=True,
+                auto_height=True,
                 navigation=False,
                 pagination=False,
-                scroolbar=False,
+                scrollbar=False,
                 speed=100,
                 zoom=True,
             ),
-            gallery_controls(),
+            Div("No images in this batch", id="empty-gallery", hidden=bool(img_elems)),
+            Div(
+                Button(
+                    "← 9",
+                    type="button",
+                    data_step="-9",
+                    aria_label="Previous thumbnail group",
+                    cls="z-button z-button-ghost",
+                ),
+                Div(id="filmstrip-items", role="group", aria_label="Image thumbnails"),
+                Button(
+                    "9 →",
+                    type="button",
+                    data_step="9",
+                    aria_label="Next thumbnail group",
+                    cls="z-button z-button-ghost",
+                ),
+                id="filmstrip",
+                hidden=True,
+            ),
+            gallery_controls(finder_available=finder_available),
             cls="gallery-shell",
         ),
     )
