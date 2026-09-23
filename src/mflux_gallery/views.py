@@ -1,5 +1,8 @@
 """Gallery HTML components; callers supply all filesystem and configuration data."""
 
+from pathlib import Path
+from typing import Any, Literal
+
 from fasthtml.components import (
     H4,
     A,
@@ -29,9 +32,12 @@ from fasthtml.components import (
     Title,
     Ul,
 )
+from fasthtml.core import FT
+
+GalleryMode = Literal["default", "shuffled", "oldest"]
 
 
-def image_actions(gallery_path, count):
+def image_actions(gallery_path: str, count: int) -> FT:
     return Div(cls="grid image-actions", style="margin-top: 10px;")(
         Div(),
         Div(
@@ -68,8 +74,14 @@ def image_actions(gallery_path, count):
 
 
 def image_card(
-    gallery_path, count, load_limit, total_matches, recency, resize_width=None
-):
+    gallery_path: str,
+    *,
+    count: int,
+    load_limit: int,
+    total_matches: int,
+    recency: str,
+    resize_width: int | None = None,
+) -> FT:
     hx_vals = {"gallery_path": gallery_path}
     if resize_width is not None:
         hx_vals["resize_width"] = resize_width
@@ -98,7 +110,7 @@ def image_card(
     )
 
 
-def metadata_panel(metadata):
+def metadata_panel(metadata: dict[str, Any]) -> FT:
     metadata_components = [
         Div(
             Strong("Prompt: "),
@@ -126,7 +138,7 @@ def metadata_panel(metadata):
     )
 
 
-def image_element(data_uri_src, metadata):
+def image_element(data_uri_src: str, metadata: dict[str, Any] | None) -> FT:
     components = [
         Div(
             cls="swiper-zoom-container",
@@ -144,7 +156,7 @@ def image_element(data_uri_src, metadata):
     return Div(*components)
 
 
-def gallery_navigation(mode, current_resize):
+def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
     return Nav()(
         Ul()(
             Li(A(href=f"/?resize_width={current_resize}")("Latest ▶️")),
@@ -175,7 +187,7 @@ def gallery_navigation(mode, current_resize):
     )
 
 
-def gallery_controls():
+def gallery_controls() -> FT:
     return Footer(
         Div(id="mobile-controls")(
             Button(
@@ -211,8 +223,14 @@ def gallery_controls():
 
 
 def gallery_page(
-    title, img_elems, gallery_dir, total_images, current_resize, mode="default"
-):
+    title: str,
+    img_elems: list[FT],
+    *,
+    gallery_dir: Path,
+    total_images: int,
+    current_resize: int,
+    mode: GalleryMode = "default",
+) -> tuple[FT, FT]:
     return (
         Title(gallery_dir),
         Div(

@@ -4,13 +4,14 @@ import random
 import time
 import typing as t
 from importlib.resources import files
+from pathlib import Path
 
 from fasthtml.components import (
     Meta,
     P,
     Sup,
 )
-from fasthtml.core import HtmxResponseHeaders, reg_re_param, serve
+from fasthtml.core import FT, HtmxResponseHeaders, reg_re_param, serve
 from fasthtml.fastapp import fast_app
 from fasthtml.toaster import add_toast, setup_toasts
 from fasthtml.xtend import Script, Style
@@ -54,7 +55,7 @@ custom_css = Style(
 )
 
 
-def get_created_recency_description(path_st_mtime):
+def get_created_recency_description(path_st_mtime: float) -> str:
     diff_secs = time.time() - path_st_mtime
     if diff_secs < 60:
         return "just created"
@@ -66,23 +67,26 @@ def get_created_recency_description(path_st_mtime):
         return f"{diff_secs / 86_400:,.0f} days ago"
 
 
-def get_image_metadata(img_path):
+def get_image_metadata(img_path: Path) -> t.Any:
     """Load JSON metadata for an image if it exists."""
     json_path = img_path.with_suffix(".json")
     if json_path.exists():
         try:
-            with open(json_path, "r") as f:
-                data = json.load(f)
+            with open(json_path, "r") as metadata_file:
+                data = json.load(metadata_file)
                 return data
         except (json.JSONDecodeError, IOError):
             return None
     return None
 
 
-def get_page_images(sort_order="newest", resize_width=None):
+def get_page_images(
+    sort_order: t.Literal["newest", "oldest"] = "newest",
+    resize_width: int | None = None,
+) -> list[FT]:
     reverse = sort_order == "newest"
     matches = sorted(
-        list(iter(app_gallery)), key=lambda _: _.stat().st_mtime, reverse=reverse
+        list(iter(app_gallery)), key=lambda path: path.stat().st_mtime, reverse=reverse
     )
     if not matches:
         print(f"No images found in {GALLERY_DIR}")
@@ -97,11 +101,11 @@ def get_page_images(sort_order="newest", resize_width=None):
         tags.append(
             views.image_card(
                 gallery_path,
-                count,
-                args.load_limit,
-                len(matches),
-                get_created_recency_description(img_path.stat().st_mtime),
-                resize_width,
+                count=count,
+                load_limit=args.load_limit,
+                total_matches=len(matches),
+                recency=get_created_recency_description(img_path.stat().st_mtime),
+                resize_width=resize_width,
             )
         )
     return tags
@@ -127,7 +131,7 @@ reg_re_param("path_segments", r"[^\.]+")
 
 
 @rt("/image_element")
-async def get(session, gallery_path: str, resize_width: int = None):
+async def get(session, gallery_path: str, resize_width: int | None = None):
     try:
         # Use provided resize_width or fall back to the default
         if resize_width is None:
@@ -148,7 +152,12 @@ async def get(session, gallery_path: str, resize_width: int = None):
         )
 
 
-def log_notif(session, notif, send_toast=False, **toast_kwargs):
+def log_notif(
+    session: dict[str, t.Any],
+    notif: str,
+    send_toast: bool = False,
+    **toast_kwargs: t.Any,
+) -> None:
     print(notif)
     if send_toast:
         add_toast(session, notif, **toast_kwargs)
@@ -195,23 +204,28 @@ async def post(session, action: str, gallery_path: str):
 
 
 def _gallery_page(
-    title,
-    img_elems,
-    mode: t.Literal["default", "shuffled", "oldest"] = "default",
-    resize_width: int = None,
-):
+    title: str,
+    img_elems: list[FT],
+    mode: views.GalleryMode = "default",
+    resize_width: int | None = None,
+) -> tuple[FT, FT]:
     # Get actual total count of images in gallery
     total_images = app_gallery.count_all_images()
     # Determine current resize width for dropdown
     current_resize = resize_width if resize_width is not None else args.resize_max_width
 
     return views.gallery_page(
-        title, img_elems, GALLERY_DIR, total_images, current_resize, mode
+        title,
+        img_elems,
+        gallery_dir=GALLERY_DIR,
+        total_images=total_images,
+        current_resize=current_resize,
+        mode=mode,
     )
 
 
 @rt("/")
-def get(session, resize_width: int = None):
+def get(session, resize_width: int | None = None):
     # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/?resize_width={args.resize_max_width}")
@@ -222,7 +236,7 @@ def get(session, resize_width: int = None):
 
 
 @rt("/oldest")
-def get(session, resize_width: int = None):
+def get(session, resize_width: int | None = None):
     # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/oldest?resize_width={args.resize_max_width}")
@@ -231,7 +245,7 @@ def get(session, resize_width: int = None):
 
 
 @rt("/shuffled")
-def get(session, resize_width: int = None):
+def get(session, resize_width: int | None = None):
     # Redirect to include resize_width parameter if not present
     if resize_width is None:
         return RedirectResponse(f"/shuffled?resize_width={args.resize_max_width}")
@@ -242,7 +256,7 @@ def get(session, resize_width: int = None):
     )
 
 
-def main():
+def main() -> None:
     print(f"Port: {args.port}")
     print(f"Delete Mode: {args.delete_mode}")
     serve(

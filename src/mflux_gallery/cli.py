@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 
-def create_parser():
+def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="genai-gallery", description="Manage an AI image gallery."
     )
