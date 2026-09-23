@@ -2,6 +2,7 @@ import base64
 import io
 import subprocess
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 from PIL import Image
@@ -22,25 +23,25 @@ class Gallery:
         gallery_dir: Path,
         photo_suffixes: list[str] = DEFAULT_PHOTO_SUFFIXES,
         resize_max_width: int = 512,
-        load_limit=1000,
-    ):
+        load_limit: int = 1000,
+    ) -> None:
         self.gallery_dir = gallery_dir
         self.photo_suffixes = photo_suffixes
         self.resize_max_width = resize_max_width
         self.load_limit = load_limit
-        self._count_cache = None
+        self._count_cache: int | None = None
         self._count_cache_time = 0
         self._cache_duration = 60  # Cache for 1 minute
 
-    def __iter__(self) -> Path:
+    def __iter__(self) -> Iterator[Path]:
         count = 0
-        for suf in self.photo_suffixes:
-            for _ in self._paths_with_suffix(suf):
+        for suffix in self.photo_suffixes:
+            for path in self._paths_with_suffix(suffix):
                 if count <= self.load_limit:
-                    yield _
+                    yield path
                 count += 1
 
-    def _paths_with_suffix(self, suffix: str):
+    def _paths_with_suffix(self, suffix: str) -> Iterator[Path]:
         # Path.rglob(case_sensitive=...) requires Python 3.12.
         return (
             path
@@ -52,36 +53,33 @@ class Gallery:
         """Count all images in the gallery without load limit. Results are cached for 1 minute."""
         current_time = time.monotonic()
 
-        # Check if cache is still valid
         if (
             self._count_cache is not None
             and current_time - self._count_cache_time < self._cache_duration
         ):
             return self._count_cache
 
-        # Recount images
         total = 0
         print("Recounting images...")
-        for suf in self.photo_suffixes:
-            total += sum(
-                1 for _ in self._paths_with_suffix(suf)
-            )
+        for suffix in self.photo_suffixes:
+            total += sum(1 for _ in self._paths_with_suffix(suffix))
 
-        # Update cache
         self._count_cache = total
         self._count_cache_time = current_time
 
         return total
 
-    def invalidate_count_cache(self):
+    def invalidate_count_cache(self) -> None:
         """Invalidate the count cache, forcing a recount on next access."""
         self._count_cache = None
         self._count_cache_time = 0
 
     async def get_image_as_base64(
-        self, gallery_path, format="WEBP", resize_max_width: int = None
+        self,
+        gallery_path: str | Path,
+        format: str = "WEBP",
+        resize_max_width: int | None = None,
     ) -> str:
-        # Use provided resize_max_width or fall back to instance default
         resize_width = (
             resize_max_width if resize_max_width is not None else self.resize_max_width
         )
@@ -95,8 +93,7 @@ class Gallery:
                 )
             buffer = io.BytesIO()
             img.save(buffer, format=format)
-            buffer.seek(0)
-            img_bytes = buffer.read()
+            img_bytes = buffer.getvalue()
         base64_str = base64.b64encode(img_bytes).decode("utf-8")
         return f"data:image/{format.lower()};base64,{base64_str}"
 
@@ -116,8 +113,8 @@ class Gallery:
         if target.exists():
             target.unlink()
             if delete_other_suffixes:
-                for suf in delete_other_suffixes:
-                    target_suf = target.with_suffix(suf)
+                for suffix in delete_other_suffixes:
+                    target_suf = target.with_suffix(suffix)
                     if target_suf.exists():
                         target_suf.unlink()
             # Decrement cache if valid, otherwise invalidate
@@ -126,10 +123,11 @@ class Gallery:
             else:
                 self.invalidate_count_cache()
             return target, True
-        else:
-            return target, False
+        return target, False
 
-    async def show_in_finder(self, gallery_path: str | Path):
+    async def show_in_finder(
+        self, gallery_path: str | Path
+    ) -> tuple[Path, bool, int | str]:
         target = await self.resolve_target(gallery_path)
         try:
             return target, True, subprocess.call(["/usr/bin/open", "-R", str(target)])

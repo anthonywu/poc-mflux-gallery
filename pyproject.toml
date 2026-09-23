@@ -19,10 +19,10 @@ dependencies = [
 mflux-gallery = "mflux_gallery.main:main"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
-select = ["BLE", "E4", "E7", "E9", "F", "I", "ICN", "LOG", "PERF", "W"]
+select = ["BLE", "C90", "E4", "E7", "E9", "F", "I", "ICN", "LOG", "PERF", "W"]
 ignore = [
     "F811", # ignore reused get/post definitions
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
