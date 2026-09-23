@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/surreal@main/surreal.js"></script><script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>    <meta name="format-detection" content="telephone=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:2ebfa7d32156ff3d97c53e5093d2673dbfd8b44bdce2e94fc708fd143e126cd2</script>    <style>sha256:264592feea5fd1e786629d67452b0c84f57816c6fbc758c9a2c233de3eaad2c1</style>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:a07ba449ee3380339ed76d69c6e8ba74fa64eaf4475688b01412573504edd9ce</script>    <style>sha256:1c10c4dfaed50f56b88cb72b7556db930ad928a0a66e9e02c0fd48afd5da6139</style>
     <style>sha256:6ec9872e19c644e89ca39396b2e13a85a6520f569252897b14d11c81f7449124</style>
 <script>sha256:783f6c3ff9033b6294eff594308b490ff850902bb77ed8c69c08b8562737d406</script>  </head>
   <body>
@@ -17,22 +17,24 @@
 <small class="eyebrow">MFLUX / IMAGE LIBRARY</small>          <h1>Gallery</h1>
         </div>
         <div class="gallery-location">
-<code><GALLERY></code><span class="image-count"><sup id="photo-counter">3</sup> images</span>        </div>
+<code title="<GALLERY>"><GALLERY></code><span class="image-count"><sup id="photo-counter">3</sup> images</span>        </div>
       </div>
       <nav aria-label="Gallery controls">
         <ul>
           <li>
-<a href="/?resize_width=32" class="z-button z-button-ghost">Latest</a>          </li>
+<a aria-keyshortcuts="a" href="/?resize_width=32" class="z-button z-button-ghost">Latest<kbd class="nav-shortcut">A</kbd></a>          </li>
           <li>
-<a href="/oldest?resize_width=32" aria-current="page" class="z-button z-button-ghost">Oldest</a>          </li>
+<a aria-keyshortcuts="z" href="/oldest?resize_width=32" aria-current="page" class="z-button z-button-ghost">Oldest<kbd class="nav-shortcut">Z</kbd></a>          </li>
           <li>
-<a href="/shuffled?resize_width=32" class="z-button z-button-ghost">Shuffled</a>          </li>
+<a aria-keyshortcuts="s" href="/shuffled?resize_width=32" class="z-button z-button-ghost">Shuffled<kbd class="nav-shortcut">S</kbd></a>          </li>
           <li>
-<label for="resize-select" style="margin-right: 5px;">Max Width: </label><select name="resize_width" onchange="window.location.href = '/oldest?resize_width=' + this.value" id="resize-select" class="z-select"><option value="256">256px</option><option value="512">512px</option><option value="768">768px</option><option value="1024">1024px</option></select>          </li>
+<label for="resize-select" style="margin-right: 5px;">Max Width: </label><select name="resize_width" aria-keyshortcuts="1 2 3 4" onchange="window.location.href = '/oldest?resize_width=' + this.value" id="resize-select" class="z-select" title="Max width: 1 = 256px, 2 = 512px, 3 = 768px, 4 = 1024px"><option value="256">256px · 1</option><option value="512">512px · 2</option><option value="768">768px · 3</option><option value="1024">1024px · 4</option></select>          </li>
           <li>
 <button aria-label="Toggle dark/light mode" onclick="toggleTheme()" class="z-button z-button-default theme-toggle" title="Toggle dark/light mode">🌙</button>          </li>
         </ul>
       </nav>
+      <div role="group" aria-label="Image navigation" class="browse-controls">
+<button type="button" data-step="-1" aria-label="Previous image" class="z-button z-button-default" title="Previous image (p)">←</button><button type="button" data-step="-10" aria-label="Back ten images" class="z-button z-button-ghost jump-control" title="Back ten (j)">−10</button><span role="status" aria-live="polite" id="slide-position">0 of 0</span><button type="button" data-step="10" aria-label="Forward ten images" class="z-button z-button-ghost jump-control" title="Forward ten (k)">+10</button><button type="button" data-step="1" aria-label="Next image" class="z-button z-button-default" title="Next image (n)">→</button><button type="button" data-action="focus" aria-pressed="false" class="z-button z-button-ghost" title="Focus mode (v); Escape to exit">Focus</button><button type="button" data-action="filmstrip" aria-expanded="false" aria-controls="filmstrip" class="z-button z-button-ghost">Thumbnails</button>      </div>
 <swiper-container keyboard-enabled auto-height speed="100" zoom><swiper-slide lazy id="slide-1"><details open id="container-image-1" class="image-card z-card"><summary><mark><small>1 / of batch size 2 / total: 3</small></mark><small>3 min ago</small></summary>            <div data-image-url="/image_element?gallery_path=old.JPG&amp;resize_width=32" aria-busy="true" id="lazy-image-1" class="image-loader">
               <div class="skeleton-container">
                 <div class="skeleton-loader"></div>
@@ -75,8 +77,6 @@
       <div hidden id="filmstrip">
 <button type="button" data-step="-9" aria-label="Previous thumbnail group" class="z-button z-button-ghost">← 9</button>        <div role="group" aria-label="Image thumbnails" id="filmstrip-items"></div>
 <button type="button" data-step="9" aria-label="Next thumbnail group" class="z-button z-button-ghost">9 →</button>      </div>
-      <div role="group" aria-label="Image navigation" class="browse-controls">
-<button type="button" data-step="-1" aria-label="Previous image" class="z-button z-button-default" title="Previous image (p)">←</button><button type="button" data-step="-10" aria-label="Back ten images" class="z-button z-button-ghost jump-control" title="Back ten (j)">−10</button><span role="status" aria-live="polite" id="slide-position">0 of 0</span><button type="button" data-step="10" aria-label="Forward ten images" class="z-button z-button-ghost jump-control" title="Forward ten (k)">+10</button><button type="button" data-step="1" aria-label="Next image" class="z-button z-button-default" title="Next image (n)">→</button><button type="button" data-action="focus" aria-pressed="false" class="z-button z-button-ghost" title="Focus mode (v); Escape to exit">Focus</button><button type="button" data-action="filmstrip" aria-expanded="false" aria-controls="filmstrip" class="z-button z-button-ghost">Thumbnails</button>      </div>
       <footer>
 <details id="keyboard-controls"><summary>            <h4>Keyboard Controls ('h' to toggle)</h4>
 </summary>          <div id="keyboard-controls-hotkey-list">
@@ -90,7 +90,9 @@
               <li>
 <kbd>k</kbd><span>Jump forward 10 slides</span>              </li>
               <li>
-<kbd>a</kbd><span>Go to first slide</span>              </li>
+<kbd>Home</kbd><span>Go to first slide</span>              </li>
+              <li>
+<kbd>A / Z / S</kbd><span>Latest / Oldest / Shuffled</span>              </li>
               <li>
 <kbd>e</kbd><span>Go to last slide</span>              </li>
               <li>

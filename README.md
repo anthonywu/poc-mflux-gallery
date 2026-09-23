@@ -94,8 +94,39 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 | `f` | Show in Finder (macOS) |
 | `n` | Next image |
 | `p` | Previous image |
+| `A` / `Z` / `S` | Latest / Oldest / Shuffled (keeps the selected width) |
+| `1` / `2` / `3` / `4` | Max width: 256 / 512 / 768 / 1024px |
+| `j` / `k` | Back / forward ten images |
+| `Home` / `End` (or `e`) | First / last image in the batch |
+| `m` | Toggle prompt and image settings |
+| `v` / `Escape` | Toggle focus mode / exit focus mode |
+| `h` | Show keyboard shortcut help |
+
+Letter shortcuts work with either case and are ignored while editing text or using the width selector.
 
 Additionally, all [SwiperJS Keyboard Controls](https://swiperjs.com/swiper-api#keyboard-control) are available.
+
+The image stage fits the viewport without changing aspect ratio. Use the persistent
+navigation controls to move through the batch, or **Focus** to hide surrounding UI.
+Click a filename to copy its basename; expand **Image details** to read and copy a prompt.
+
+Full-image loading retains at most the previous, current, and next image bodies,
+preloads one image ahead, and cancels obsolete requests on jumps. Failed loads have
+a Retry button. The **Thumbnails** navigator is closed by default; it renders at
+most nine thumbnails and loads only those near view. Thumbnail responses fit
+within 128×96px and are privately cached by the browser for 60 seconds.
+
+## Browser regression checks
+
+Browser tests use generated temporary images and a temporary local server:
+
+```bash
+uv run --with playwright playwright install chromium
+uv run --with playwright python tests/browser_gallery.py
+```
+
+Set `GALLERY_BROWSER` to use an existing Chromium executable. Playwright is only
+needed for these checks, not for running the gallery.
 
 ## Optional: Try Python 3.15 prerelease
 
