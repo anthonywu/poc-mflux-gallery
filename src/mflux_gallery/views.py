@@ -149,7 +149,9 @@ def metadata_panel(metadata: dict[str, Any]) -> FT:
     )
 
 
-def image_element(data_uri_src: str, metadata: dict[str, Any] | None) -> FT:
+def image_element(
+    data_uri_src: str, metadata: dict[str, Any] | None, zoom_src: str | None = None
+) -> FT:
     components = [
         Div(
             cls="swiper-zoom-container",
@@ -159,6 +161,7 @@ def image_element(data_uri_src: str, metadata: dict[str, Any] | None) -> FT:
                 src=data_uri_src,
                 style="height: auto; width: auto; max-width: 100%;",
                 cls="swiper-zoom-target",
+                data_zoom_src=zoom_src,
             )
         )
     ]

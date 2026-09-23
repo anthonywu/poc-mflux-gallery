@@ -177,6 +177,16 @@ class GalleryRegressionTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("missing.JPG is invalid path", response.text)
 
+    def test_zoom_preserves_original_resolution_and_restricts_paths(self):
+        response = self.client.get("/image_zoom", params={"gallery_path": "new.JPG"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "image/png")
+        with Image.open(io.BytesIO(response.content)) as image:
+            self.assertEqual(image.size, (64, 32))
+        for path, status in [("missing.JPG", 404), ("../outside.JPG", 403)]:
+            response = self.client.get("/image_zoom", params={"gallery_path": path})
+            self.assertEqual(response.status_code, status)
+
     def test_delete_sidecar_counter_and_htmx_event(self):
         self.assertEqual(self.app.state.gallery.count_all_images(), 3)
         for _ in range(2):  # Repeated deletion keeps the current missing-file behavior.

@@ -338,3 +338,86 @@
             }, 1800);
         }
     });
+
+    // One viewport-level lens avoids clipping by Swiper's slide containers.
+    document.addEventListener('DOMContentLoaded', () => {
+        const lens = document.createElement('div');
+        lens.className = 'image-zoom-lens';
+        lens.hidden = true;
+        lens.setAttribute('aria-hidden', 'true');
+        const detail = new Image();
+        detail.alt = '';
+        detail.draggable = false;
+        lens.append(detail);
+        document.body.append(lens);
+        const originals = new WeakMap();
+        let activeImage = null;
+        let pointer = null;
+        let magnification = 2;
+
+        function hideLens() {
+            lens.hidden = true;
+            activeImage = null;
+        }
+
+        function renderLens() {
+            if (!activeImage || !activeImage.isConnected) return hideLens();
+            const rect = activeImage.getBoundingClientRect();
+            const x = pointer.x - rect.left;
+            const y = pointer.y - rect.top;
+            if (x < 0 || y < 0 || x > rect.width || y > rect.height) return hideLens();
+            const original = originals.get(activeImage);
+            // Show the preview immediately while the full-resolution image loads.
+            const source = original?.complete && original.naturalWidth
+                ? original.src : activeImage.currentSrc;
+            if (detail.src !== source) detail.src = source;
+            lens.hidden = false;
+            lens.dataset.zoom = `${magnification}×`;
+            const radius = lens.clientWidth / 2;
+            lens.style.left = `${pointer.x - radius}px`;
+            lens.style.top = `${pointer.y - radius}px`;
+            detail.style.width = `${rect.width * magnification}px`;
+            detail.style.height = `${rect.height * magnification}px`;
+            detail.style.left = `${radius - x * magnification}px`;
+            detail.style.top = `${radius - y * magnification}px`;
+        }
+
+        document.addEventListener('pointermove', event => {
+            const img = event.target.closest('img.swiper-zoom-target');
+            if (event.pointerType === 'touch' || event.buttons || !img || !img.naturalWidth) {
+                hideLens();
+                return;
+            }
+            magnification = event.altKey || event.metaKey ? 4 : 2;
+            activeImage = img;
+            pointer = {x: event.clientX, y: event.clientY};
+            if (img.dataset.zoomSrc && !originals.has(img)) {
+                const original = new Image();
+                originals.set(img, original);
+                original.onload = () => {
+                    if (activeImage === img) renderLens();
+                };
+                original.src = img.dataset.zoomSrc;
+            }
+            renderLens();
+        });
+        document.addEventListener('pointerout', event => {
+            if (event.target === activeImage) hideLens();
+        });
+        for (const type of ['keydown', 'keyup']) {
+            document.addEventListener(type, event => {
+                magnification = event.altKey || event.metaKey ? 4 : 2;
+                if (event.key === 'Alt' || event.key === 'Meta') {
+                    renderLens();
+                } else if (type === 'keydown') {
+                    hideLens();
+                }
+            });
+        }
+        for (const event of ['pointerdown', 'pointercancel', 'swiperslidechangetransitionstart', 'swiperzoomchange', 'delete-successful']) {
+            document.addEventListener(event, hideLens);
+        }
+        window.addEventListener('scroll', hideLens, true);
+        window.addEventListener('resize', hideLens);
+        window.addEventListener('blur', hideLens);
+    });
