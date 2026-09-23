@@ -451,3 +451,7 @@
     .browse-controls [data-action] { font-size: 11px; padding-inline: 8px; }
   }
 }
+
+@layer styles {
+  .image-load-error { height: var(--stage-height); display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--z-muted-f); }
+}
