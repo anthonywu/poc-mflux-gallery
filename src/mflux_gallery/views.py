@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlencode
 
 from fasthtml.components import (
     H1,
@@ -82,9 +83,9 @@ def image_card(
     recency: str,
     resize_width: int | None = None,
 ) -> FT:
-    hx_vals = {"gallery_path": gallery_path}
+    image_params = {"gallery_path": gallery_path}
     if resize_width is not None:
-        hx_vals["resize_width"] = resize_width
+        image_params["resize_width"] = resize_width
     return Details(
         Summary(
             Mark(
@@ -94,10 +95,9 @@ def image_card(
         ),
         Div(
             id=f"lazy-image-{count}",
-            hx_trigger="intersect once throttle:2s",
-            hx_get="/image_element",
-            hx_vals=hx_vals,
-            hx_swap="innerHTML swap:innerHTML transition:fade:200ms:true",
+            cls="image-loader",
+            data_image_url="/image_element?" + urlencode(image_params),
+            aria_busy="true",
         )(
             Div(cls="skeleton-container")(
                 Div(cls="skeleton-loader"), Small(cls="skeleton-text short")
@@ -334,10 +334,9 @@ def gallery_page(
                 ],
                 keyboard_enabled=True,
                 auto_height=True,
-                lazy_preload_prev_next=True,
                 navigation=False,
                 pagination=False,
-                scroolbar=False,
+                scrollbar=False,
                 speed=100,
                 zoom=True,
             ),

@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js"></script><script src="https://cdn.jsdelivr.net/gh/answerdotai/surreal@main/surreal.js"></script><script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js"></script>    <meta name="format-detection" content="telephone=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/0builddotdev/0build@0.6.12/dist/css/kit.min.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:e4e886c52b9e3d731451585634307980be7fb611f929aab07c244e3dc673f66e</script>    <style>sha256:ec57c1a7cd746b00708d917c0e57d3d24958945c1df291a6451b51dbd9c601a2</style>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-element-bundle.min.js"></script><script>sha256:f1fa04cfe9f0ca918c365563892167d73d04973cc73634ed4aa24c59dd071087</script>    <style>sha256:ee3f128e259e4e89e32ab48eb6627169de29be99250a3d0cb74ed135fc042389</style>
     <style>sha256:6ec9872e19c644e89ca39396b2e13a85a6520f569252897b14d11c81f7449124</style>
 <script>sha256:783f6c3ff9033b6294eff594308b490ff850902bb77ed8c69c08b8562737d406</script>  </head>
   <body>
@@ -33,7 +33,7 @@
 <button aria-label="Toggle dark/light mode" onclick="toggleTheme()" class="z-button z-button-default theme-toggle" title="Toggle dark/light mode">🌙</button>          </li>
         </ul>
       </nav>
-<swiper-container keyboard-enabled auto-height lazy-preload-prev-next speed="100" zoom><swiper-slide lazy id="slide-1"><details open id="container-image-2" class="image-card z-card"><summary><mark><small>2 / of batch size 2 / total: 3</small></mark><small>2 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "middle.JPG", "resize_width": 32}' id="lazy-image-2">
+<swiper-container keyboard-enabled auto-height speed="100" zoom><swiper-slide lazy id="slide-1"><details open id="container-image-2" class="image-card z-card"><summary><mark><small>2 / of batch size 2 / total: 3</small></mark><small>2 min ago</small></summary>            <div data-image-url="/image_element?gallery_path=middle.JPG&amp;resize_width=32" aria-busy="true" id="lazy-image-2" class="image-loader">
               <div class="skeleton-container">
                 <div class="skeleton-loader"></div>
 <small class="skeleton-text short"></small>              </div>
@@ -52,7 +52,7 @@
                   <input type="hidden" name="slide_delete_index" value="2">
 </form>              </div>
             </div>
-</details></swiper-slide><swiper-slide lazy id="slide-2"><details open id="container-image-1" class="image-card z-card"><summary><mark><small>1 / of batch size 2 / total: 3</small></mark><small>1 min ago</small></summary>            <div hx-trigger="intersect once throttle:2s" hx-get="/image_element" hx-swap="innerHTML swap:innerHTML transition:fade:200ms:true" hx-vals='{"gallery_path": "new.JPG", "resize_width": 32}' id="lazy-image-1">
+</details></swiper-slide><swiper-slide lazy id="slide-2"><details open id="container-image-1" class="image-card z-card"><summary><mark><small>1 / of batch size 2 / total: 3</small></mark><small>1 min ago</small></summary>            <div data-image-url="/image_element?gallery_path=new.JPG&amp;resize_width=32" aria-busy="true" id="lazy-image-1" class="image-loader">
               <div class="skeleton-container">
                 <div class="skeleton-loader"></div>
 <small class="skeleton-text short"></small>              </div>

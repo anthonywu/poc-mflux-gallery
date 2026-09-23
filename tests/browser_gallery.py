@@ -60,6 +60,13 @@ class GalleryBrowserTests(unittest.TestCase):
         )
         self.addCleanup(self.browser.close)
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 900})
+        self.image_requests = []
+        self.page.on(
+            "request",
+            lambda request: self.image_requests.append(request.url)
+            if "/image_element?" in request.url
+            else None,
+        )
         self.errors = []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
         self.page.goto(self.url + "/?resize_width=512")
@@ -75,6 +82,26 @@ class GalleryBrowserTests(unittest.TestCase):
             "(el, i) => el.swiper.slideTo(i, 0)", index
         )
         self.page.wait_for_timeout(100)
+
+    def test_loading_is_bounded_and_retry_recovers(self):
+        expect(self.page.locator(".image-loader[data-loaded]")).to_have_count(2)
+        self.assertEqual(len(self.image_requests), 2)
+        for index in range(5):
+            self.slide_to(index)
+            expect(self.page.locator(".swiper-slide-active img")).to_be_visible()
+            self.assertLessEqual(self.page.locator(".image-loader img").count(), 3)
+        self.page.route(
+            "**/image_element?*",
+            lambda route: route.fulfill(status=503, body="Temporarily unavailable"),
+            times=1,
+        )
+        self.page.reload()
+        retry = self.page.locator('.swiper-slide-active [data-action="retry-image"]')
+        expect(retry).to_be_visible()
+        retry.click()
+        expect(self.page.locator(".swiper-slide-active img")).to_be_visible()
+        expect(retry).to_have_count(0)
+        self.assertEqual(self.errors, [])
 
     def test_focus_metadata_and_prompt_copy(self):
         self.page.context.grant_permissions(["clipboard-read", "clipboard-write"])

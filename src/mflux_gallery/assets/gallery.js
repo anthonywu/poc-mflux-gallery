@@ -330,6 +330,7 @@
             button.disabled = !count || (Number(button.dataset.step) < 0 ? swiper.isBeginning : swiper.isEnd);
         });
         swiper.updateAutoHeight(0);
+        updateGalleryImages();
     }
     document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('swiper-container');
@@ -368,4 +369,76 @@
             event.preventDefault();
             setFocusMode(!document.documentElement.classList.contains('focus-mode'));
         }
+    });
+
+    // Retain only the previous, current, and next image bodies. At most two
+    // requests run for a stable position; obsolete requests are aborted on jumps.
+    const imageRequests = new Map();
+    function resetImageLoader(loader) {
+        imageRequests.get(loader)?.abort();
+        imageRequests.delete(loader);
+        if (loader.placeholderHTML !== undefined) loader.innerHTML = loader.placeholderHTML;
+        delete loader.dataset.loaded;
+        delete loader.dataset.failed;
+        loader.setAttribute('aria-busy', 'true');
+    }
+    async function loadGalleryImage(loader) {
+        if (!loader || loader.dataset.loaded || loader.dataset.failed || imageRequests.has(loader)) return;
+        loader.placeholderHTML ??= loader.innerHTML;
+        const controller = new AbortController();
+        imageRequests.set(loader, controller);
+        loader.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(loader.dataset.imageUrl, {
+                headers: {'HX-Request': 'true'}, signal: controller.signal,
+            });
+            if (!response.ok) throw new Error('Image request failed');
+            const html = await response.text();
+            if (controller.signal.aborted || !loader.isConnected) return;
+            const content = document.createElement('template');
+            content.innerHTML = html;
+            if (!content.content.querySelector('img')) throw new Error('Image unavailable');
+            loader.replaceChildren(content.content);
+            loader.dataset.loaded = 'true';
+        } catch (error) {
+            if (controller.signal.aborted || !loader.isConnected) return;
+            loader.dataset.failed = 'true';
+            const message = document.createElement('div');
+            message.className = 'image-load-error';
+            message.setAttribute('role', 'status');
+            message.append('Could not load this image. ');
+            const retry = document.createElement('button');
+            retry.type = 'button';
+            retry.className = 'z-button z-button-default';
+            retry.dataset.action = 'retry-image';
+            retry.textContent = 'Retry';
+            message.append(retry);
+            loader.replaceChildren(message);
+        } finally {
+            if (imageRequests.get(loader) === controller) {
+                imageRequests.delete(loader);
+                loader.setAttribute('aria-busy', 'false');
+                document.querySelector('swiper-container')?.swiper?.updateAutoHeight(0);
+            }
+        }
+    }
+    function updateGalleryImages() {
+        const swiper = document.querySelector('swiper-container')?.swiper;
+        if (!swiper) return;
+        const keep = new Set(Array.from(swiper.slides).slice(Math.max(0, swiper.activeIndex - 1), swiper.activeIndex + 2).map(slide => slide.querySelector('.image-loader')));
+        for (const loader of imageRequests.keys()) {
+            if (!keep.has(loader)) resetImageLoader(loader);
+        }
+        document.querySelectorAll('.image-loader[data-loaded], .image-loader[data-failed]').forEach(loader => {
+            if (!keep.has(loader)) resetImageLoader(loader);
+        });
+        loadGalleryImage(swiper.slides[swiper.activeIndex]?.querySelector('.image-loader'));
+        loadGalleryImage(swiper.slides[swiper.activeIndex + 1]?.querySelector('.image-loader'));
+    }
+    document.addEventListener('click', event => {
+        const retry = event.target.closest('[data-action="retry-image"]');
+        if (!retry) return;
+        const loader = retry.closest('.image-loader');
+        resetImageLoader(loader);
+        loadGalleryImage(loader);
     });
