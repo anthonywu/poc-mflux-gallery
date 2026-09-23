@@ -393,3 +393,43 @@
     }
   }
 }
+
+@layer styles {
+  :root { --stage-height: clamp(180px, calc(100svh - 330px), 900px); }
+  .gallery-shell { padding-top: 20px; padding-bottom: 20px; }
+  .gallery-heading { margin-bottom: 14px; align-items: center; }
+  h1 { font-size: 24px; margin: 0; }
+  .gallery-location { max-width: 60%; }
+  .gallery-location code { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav { margin-bottom: 12px; padding-block: 8px; }
+  .image-card { padding: 12px; }
+  .image-card > summary { margin-bottom: 10px; }
+  .swiper-zoom-container { height: var(--stage-height); min-height: 0; padding: 8px; }
+  .swiper-zoom-container img { max-height: 100%; object-fit: contain; }
+  .skeleton-container { height: var(--stage-height); padding: 0; }
+  .skeleton-loader { height: 100%; }
+  .skeleton-text { display: none; }
+  .image-filename { padding: 6px 0; }
+  .metadata-section { padding-block: 8px; }
+  .browse-controls { display: flex; justify-content: center; align-items: center; gap: 12px; position: sticky; bottom: 12px; z-index: 5; width: fit-content; max-width: 100%; margin: 12px auto 0; padding: 8px; border: 1px solid var(--gallery-border); border-radius: 12px; background: var(--z-card); box-shadow: 0 4px 16px #0001; }
+  #slide-position { min-width: 70px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #empty-gallery { padding: 60px 20px; text-align: center; color: var(--z-muted-f); }
+  [hidden] { display: none !important; }
+  @media (max-width: 640px) {
+    .gallery-heading { flex-direction: row; gap: 12px; }
+    .gallery-location { align-items: end; }
+    .gallery-location code { max-width: 130px; }
+    .eyebrow { font-size: 8px; letter-spacing: .08em; }
+    .image-card > summary > small { display: inline; float: right; margin: 0; }
+    .browse-controls { gap: 4px; bottom: max(8px, env(safe-area-inset-bottom)); }
+    .jump-control { padding-inline: 8px; }
+  }
+}
+@layer styles {
+  @media (max-width: 360px) {
+    .browse-controls { gap: 2px; padding: 4px; }
+    .browse-controls .z-button { min-width: 0; padding-inline: 6px; }
+    #slide-position { min-width: 54px; font-size: 11px; }
+    .image-card > summary > small { float: none; display: block; margin-top: 8px; }
+  }
+}

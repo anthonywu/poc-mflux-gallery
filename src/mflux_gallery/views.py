@@ -221,22 +221,49 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
     )
 
 
+def browse_controls() -> FT:
+    return Div(
+        Button(
+            "←",
+            type="button",
+            data_step="-1",
+            aria_label="Previous image",
+            title="Previous image (p)",
+            cls="z-button z-button-default",
+        ),
+        Button(
+            "−10",
+            type="button",
+            data_step="-10",
+            aria_label="Back ten images",
+            title="Back ten (j)",
+            cls="z-button z-button-ghost jump-control",
+        ),
+        Span("0 of 0", id="slide-position", role="status", aria_live="polite"),
+        Button(
+            "+10",
+            type="button",
+            data_step="10",
+            aria_label="Forward ten images",
+            title="Forward ten (k)",
+            cls="z-button z-button-ghost jump-control",
+        ),
+        Button(
+            "→",
+            type="button",
+            data_step="1",
+            aria_label="Next image",
+            title="Next image (n)",
+            cls="z-button z-button-default",
+        ),
+        cls="browse-controls",
+        role="group",
+        aria_label="Image navigation",
+    )
+
+
 def gallery_controls() -> FT:
     return Footer(
-        Div(id="mobile-controls")(
-            Button(
-                "← 10",
-                onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.max(0, swiper.activeIndex - 10));",
-                cls="z-button z-button-default",
-                style="min-width: 80px;",
-            ),
-            Button(
-                "10 →",
-                onclick="event.preventDefault(); const swiper = document.querySelector('swiper-container').swiper; swiper.slideTo(Math.min(swiper.slides.length - 1, swiper.activeIndex + 10));",
-                cls="z-button z-button-default",
-                style="min-width: 80px;",
-            ),
-        ),
         Details(id="keyboard-controls")(
             Summary(H4("Keyboard Controls ('h' to toggle)")),
             Div(id="keyboard-controls-hotkey-list")(
@@ -287,6 +314,7 @@ def gallery_page(
                     for i, elem in enumerate(img_elems, 1)
                 ],
                 keyboard_enabled=True,
+                auto_height=True,
                 lazy_preload_prev_next=True,
                 navigation=False,
                 pagination=False,
@@ -294,6 +322,8 @@ def gallery_page(
                 speed=100,
                 zoom=True,
             ),
+            Div("No images in this batch", id="empty-gallery", hidden=bool(img_elems)),
+            browse_controls(),
             gallery_controls(),
             cls="gallery-shell",
         ),
