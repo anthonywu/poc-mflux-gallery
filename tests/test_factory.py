@@ -43,7 +43,7 @@ assert set(cwd.iterdir()) == before
     def test_apps_have_independent_roots_and_configuration(self):
         cwd = Path.cwd()
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             first, second = root / "first", root / "second"
             first.mkdir()
             second.mkdir()
@@ -90,7 +90,7 @@ assert set(cwd.iterdir()) == before
                 self.assertTrue(kwargs["factory"])
                 app = main._create_cli_app()
                 self.assertEqual(app.state.config.load_limit, 7)
-                self.assertEqual(app.state.config.directory, Path(directory))
+                self.assertEqual(app.state.config.directory, Path(directory).resolve())
 
             with (
                 patch.object(
@@ -104,7 +104,7 @@ assert set(cwd.iterdir()) == before
 
     def test_debug_reload_with_relative_directory(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             gallery = root / "pictures"
             gallery.mkdir()
             Image.new("RGB", (32, 16), "blue").save(gallery / "sample.JPG")

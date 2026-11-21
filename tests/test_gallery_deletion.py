@@ -8,7 +8,7 @@ from mflux_gallery.gallery import Gallery
 
 class GalleryDeletionTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         self.gallery = Gallery(self.root)
 
     def add_file(self, name):

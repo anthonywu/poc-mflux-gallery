@@ -66,7 +66,7 @@ class InteractionContract(HTMLParser):
 class GalleryRegressionTests(unittest.TestCase):
     def setUp(self):
         directory = self.enterContext(tempfile.TemporaryDirectory())
-        self.root = Path(directory)
+        self.root = Path(directory).resolve()
         self.main = main
         for index, name in enumerate(["old.JPG", "middle.JPG", "new.JPG"]):
             path = self.root / name
@@ -105,13 +105,15 @@ class GalleryRegressionTests(unittest.TestCase):
         for tag in ("script", "style"):
             html = re.sub(
                 rf"(<{tag}[^>]*>)(.*?)(</{tag}>)",
-                lambda m: m[1]
-                + (
-                    "sha256:" + hashlib.sha256(m[2].encode()).hexdigest()
-                    if m[2]
-                    else ""
-                )
-                + m[3],
+                lambda m: (
+                    m[1]
+                    + (
+                        "sha256:" + hashlib.sha256(m[2].encode()).hexdigest()
+                        if m[2]
+                        else ""
+                    )
+                    + m[3]
+                ),
                 html,
                 flags=re.S,
             )
