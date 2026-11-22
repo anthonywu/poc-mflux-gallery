@@ -29,7 +29,7 @@ class InvalidPathValueError(ValueError):
 
 class Gallery:
     DEFAULT_PHOTO_SUFFIXES = [".jpg", ".jpeg", ".png", ".heic"]
-    TRASH_DIR_NAME = ".mflux-trash"
+    TRASH_DIR_NAME = ".gallery-trash"
 
     def __init__(
         self,

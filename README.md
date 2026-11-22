@@ -89,10 +89,10 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 ## Safe Deletion
 
 By default deletion is a two-stage operation: files are moved into a
-`.mflux-trash/` folder inside the gallery directory (excluded from the
+`.gallery-trash/` folder inside the gallery directory (excluded from the
 gallery itself) and can be restored with the **Undo delete** button or the
 `u` key, which returns the image and its `.json` sidecar to their original
-location. Empty `.mflux-trash/` manually to reclaim disk space. Run with
+location. Empty `.gallery-trash/` manually to reclaim disk space. Run with
 `--delete-mode permanent` for the old direct, unrecoverable deletion.
 
 ## Keyboard Shortcuts

@@ -82,7 +82,7 @@ class GalleryDeletionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse((self.root / "photo.jpg").exists())
         self.assertFalse((self.root / "photo.json").exists())
         self.assertTrue((self.root / "keep.jpg").exists())
-        trashed = list((self.root / ".mflux-trash").iterdir())
+        trashed = list((self.root / Gallery.TRASH_DIR_NAME).iterdir())
         self.assertEqual(
             {p.name.split("-", 1)[1] for p in trashed}, {"photo.jpg", "photo.json"}
         )

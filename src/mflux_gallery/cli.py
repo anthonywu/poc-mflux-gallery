@@ -34,7 +34,7 @@ def create_parser() -> argparse.ArgumentParser:
         default="trash",
         help=(
             "Specify the delete mode for images (default: trash; "
-            "trashed files are kept in .mflux-trash and can be undone)"
+            "trashed files are kept in .gallery-trash and can be undone)"
         ),
     )
 
