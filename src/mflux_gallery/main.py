@@ -180,7 +180,8 @@ def register_image_routes(
             metadata = get_image_metadata(img_path)
 
             return views.image_element(
-                data_uri_src, metadata,
+                data_uri_src,
+                metadata,
                 zoom_src="/image_zoom?" + urlencode({"gallery_path": gallery_path}),
             )
         except FileNotFoundError:

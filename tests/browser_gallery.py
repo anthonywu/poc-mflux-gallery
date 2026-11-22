@@ -63,16 +63,20 @@ class GalleryBrowserTests(unittest.TestCase):
         self.thumbnail_requests = []
         self.page.on(
             "request",
-            lambda request: self.thumbnail_requests.append(request.url)
-            if "/thumbnail?" in request.url
-            else None,
+            lambda request: (
+                self.thumbnail_requests.append(request.url)
+                if "/thumbnail?" in request.url
+                else None
+            ),
         )
         self.image_requests = []
         self.page.on(
             "request",
-            lambda request: self.image_requests.append(request.url)
-            if "/image_element?" in request.url
-            else None,
+            lambda request: (
+                self.image_requests.append(request.url)
+                if "/image_element?" in request.url
+                else None
+            ),
         )
         self.errors = []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))

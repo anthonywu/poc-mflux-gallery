@@ -13,7 +13,7 @@ from mflux_gallery.config import AppConfig
 class PlatformControlTests(unittest.TestCase):
     def test_finder_controls_and_endpoint_follow_server_capability(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             Image.new("RGB", (16, 16)).save(root / "image.jpg")
             for available in (False, True):
                 with (
