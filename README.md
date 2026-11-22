@@ -82,9 +82,20 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 | `--host` | Host address to bind server | 0.0.0.0 |
 | `--port` | Port number for the server | 9000 |
 | `--delete-mode` | How to handle deletion ("trash" or "permanent") | trash |
-| `--load-limit` | Maximum number of images to display after sorting (0 displays none) | 100 |
+| `--load-limit` | Page size: images per page after sorting (0 displays none) | 100 |
 | `--debug` | Enable debug mode (verbose output, live reload) | False |
 | `--resize-max-width` | Maximum width for resizing gallery images | 512 |
+
+## Pagination
+
+Large folders are served in pages of `--load-limit` images (100 by default).
+The **Prev/Next** controls (or `,` / `.` keys) move between pages while
+keeping the current sort mode and image width; the page indicator shows
+`Page X of Y`. Out-of-range page URLs redirect to the nearest valid page,
+and shuffled mode uses a deterministic order so paging never repeats or
+skips images. Only the images on the current page are ever fetched, and the
+existing windowed lazy loading still limits live requests to the slides
+adjacent to your position.
 
 ## Safe Deletion
 
@@ -101,6 +112,7 @@ location. Empty `.gallery-trash/` manually to reclaim disk space. Run with
 |-----|--------|
 | `d` | Delete current image |
 | `u` | Undo the last delete (trash mode only) |
+| `,` / `.` | Previous / next page of images |
 | `f` | Show in Finder (macOS server only; hidden and inactive on Linux) |
 | `n` | Next image |
 | `p` | Previous image |

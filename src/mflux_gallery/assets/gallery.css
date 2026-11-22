@@ -456,6 +456,21 @@
   .metadata-section {
     padding-block: 8px;
   }
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin: 12px auto 0;
+  }
+  .pagination-controls .page-position {
+    opacity: 0.8;
+    font-size: 0.9em;
+  }
+  .pagination-controls [aria-disabled="true"] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
   .browse-controls {
     display: flex;
     justify-content: center;

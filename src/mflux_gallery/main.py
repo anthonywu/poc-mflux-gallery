@@ -85,20 +85,31 @@ def get_page_images(
     config: AppConfig,
     sort_order: t.Literal["newest", "oldest"] = "newest",
     resize_width: int | None = None,
-) -> list[FT]:
+    page: int = 1,
+    shuffle: bool = False,
+) -> tuple[list[FT], int, int]:
+    """Render one page of cards; returns (tags, effective_page, total_matches)."""
     reverse = sort_order == "newest"
     matches = sorted(
         app_gallery.iter_all_images(),
         key=lambda path: path.stat().st_mtime,
         reverse=reverse,
     )
+    if shuffle and matches:
+        # A deterministic order keeps page contents stable across requests.
+        random.seed(0)
+        random.shuffle(matches)
     if not matches:
         print(f"No images found in {config.directory}")
-        return []
+        return [], 1, 0
+    total_matches = len(matches)
+    limit = config.load_limit
+    if limit <= 0:
+        return [], 1, total_matches
+    page = max(1, min(page, -(-total_matches // limit)))
+    start = (page - 1) * limit
     tags = []
-    for count, img_path in enumerate(matches, 1):
-        if count > config.load_limit:
-            break
+    for count, img_path in enumerate(matches[start : start + limit], start + 1):
         gallery_path = str(img_path.relative_to(config.directory))
 
         tags.append(
@@ -106,13 +117,13 @@ def get_page_images(
                 gallery_path,
                 count=count,
                 load_limit=config.load_limit,
-                total_matches=len(matches),
+                total_matches=total_matches,
                 recency=get_created_recency_description(img_path.stat().st_mtime),
                 finder_available=FINDER_AVAILABLE,
                 resize_width=resize_width,
             )
         )
-    return tags
+    return tags, page, total_matches
 
 
 def log_notif(
@@ -131,16 +142,27 @@ def gallery_page_response(
     config: AppConfig,
     mode: views.GalleryMode,
     resize_width: int | None,
+    page: int = 1,
 ) -> Response | tuple[FT, FT]:
+    path = "/" if mode == "default" else f"/{mode}"
     if resize_width is None:
-        path = "/" if mode == "default" else f"/{mode}"
         return RedirectResponse(f"{path}?resize_width={config.resize_max_width}")
-    sort_order = "oldest" if mode == "oldest" else "newest"
-    img_elems = get_page_images(
-        app_gallery, config, sort_order=sort_order, resize_width=resize_width
+    sort_order: t.Literal["newest", "oldest"] = (
+        "oldest" if mode == "oldest" else "newest"
     )
-    if mode == "shuffled":
-        random.shuffle(img_elems)
+    img_elems, effective_page, total_matches = get_page_images(
+        app_gallery,
+        config,
+        sort_order=sort_order,
+        resize_width=resize_width,
+        page=page,
+        shuffle=mode == "shuffled",
+    )
+    if effective_page != page:
+        return RedirectResponse(
+            f"{path}?resize_width={resize_width}&page={effective_page}"
+        )
+    total_pages = -(-total_matches // config.load_limit) if config.load_limit > 0 else 0
     return views.gallery_page(
         img_elems,
         gallery_dir=config.directory,
@@ -149,6 +171,8 @@ def gallery_page_response(
         mode=mode,
         finder_available=FINDER_AVAILABLE,
         undo_available=config.delete_mode == "trash",
+        page=effective_page,
+        total_pages=total_pages,
     )
 
 
@@ -277,16 +301,22 @@ def register_page_routes(
     app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
 ) -> None:
     @app.route("/")
-    def get(session, resize_width: int | None = None):
-        return gallery_page_response(app_gallery, config, "default", resize_width)
+    def get(session, resize_width: int | None = None, page: int = 1):
+        return gallery_page_response(
+            app_gallery, config, "default", resize_width, page=page
+        )
 
     @app.route("/oldest")
-    def get(session, resize_width: int | None = None):
-        return gallery_page_response(app_gallery, config, "oldest", resize_width)
+    def get(session, resize_width: int | None = None, page: int = 1):
+        return gallery_page_response(
+            app_gallery, config, "oldest", resize_width, page=page
+        )
 
     @app.route("/shuffled")
-    def get(session, resize_width: int | None = None):
-        return gallery_page_response(app_gallery, config, "shuffled", resize_width)
+    def get(session, resize_width: int | None = None, page: int = 1):
+        return gallery_page_response(
+            app_gallery, config, "shuffled", resize_width, page=page
+        )
 
 
 def create_app(config: AppConfig) -> FastHTML:

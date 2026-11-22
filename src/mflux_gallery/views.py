@@ -315,6 +315,47 @@ def browse_controls(*, undo_available: bool = False) -> FT:
     )
 
 
+def pagination_controls(
+    mode: GalleryMode, current_resize: int, page: int, total_pages: int
+) -> FT:
+    base = "/" if mode == "default" else "/" + mode
+
+    def href(target_page: int) -> str:
+        return f"{base}?resize_width={current_resize}&page={target_page}"
+
+    has_prev, has_next = page > 1, page < total_pages
+    return Nav(aria_label="Pagination")(
+        A(
+            "← Prev ",
+            Kbd(",", cls="nav-shortcut"),
+            href=href(page - 1),
+            id="page-prev",
+            cls="z-button z-button-ghost",
+            aria_disabled=None if has_prev else "true",
+            aria_keyshortcuts=",",
+        )
+        if has_prev
+        else Span("← Prev", cls="z-button z-button-ghost", aria_disabled="true"),
+        Span(
+            f"Page {page} of {total_pages}" if total_pages else "No pages",
+            cls="page-position",
+            role="status",
+        ),
+        A(
+            "Next → ",
+            Kbd(".", cls="nav-shortcut"),
+            href=href(page + 1),
+            id="page-next",
+            cls="z-button z-button-ghost",
+            aria_disabled=None if has_next else "true",
+            aria_keyshortcuts=".",
+        )
+        if has_next
+        else Span("Next →", cls="z-button z-button-ghost", aria_disabled="true"),
+        cls="pagination-controls",
+    )
+
+
 def gallery_controls(
     *, finder_available: bool = False, undo_available: bool = False
 ) -> FT:
@@ -328,6 +369,7 @@ def gallery_controls(
                     Li(Kbd("j"), Span("Jump back 10 slides")),
                     Li(Kbd("k"), Span("Jump forward 10 slides")),
                     Li(Kbd("Home"), Span("Go to first slide")),
+                    Li(Kbd(", / ."), Span("Previous / next page of images")),
                     Li(Kbd("A / Z / S"), Span("Latest / Oldest / Shuffled")),
                     Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
@@ -353,6 +395,8 @@ def gallery_page(
     mode: GalleryMode = "default",
     finder_available: bool = False,
     undo_available: bool = False,
+    page: int = 1,
+    total_pages: int = 0,
 ) -> tuple[FT, FT]:
     return (
         Title(gallery_dir),
@@ -371,6 +415,7 @@ def gallery_page(
                 cls="gallery-heading",
             ),
             gallery_navigation(mode, current_resize),
+            pagination_controls(mode, current_resize, page, total_pages),
             browse_controls(undo_available=undo_available),
             Swiper_Container(
                 *[

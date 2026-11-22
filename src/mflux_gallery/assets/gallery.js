@@ -241,6 +241,9 @@ document.addEventListener("keydown", (event) => {
     const undoForm = document.getElementById("undo-form");
     if (!event.repeat && undoForm && !undoForm.hidden)
       undoForm.querySelector('button[type="submit"]').click();
+  } else if (key === "," || key === ".") {
+    const link = document.getElementById(key === "," ? "page-prev" : "page-next");
+    if (link && link.hasAttribute("href")) location.href = link.getAttribute("href");
   } else if (key === "m") {
     const metadata = document.querySelector(
       ".swiper-slide-active .metadata-section",
