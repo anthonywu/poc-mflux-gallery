@@ -71,3 +71,53 @@ class GalleryDeletionTests(unittest.IsolatedAsyncioTestCase):
         self.add_file("new.jpg")
         await self.gallery.delete_item("old.jpg")
         self.assertEqual(self.gallery.count_all_images(), 1)
+
+    async def test_trash_mode_keeps_files_hidden_from_the_gallery(self):
+        self.gallery.delete_mode = "trash"
+        for name in ["photo.jpg", "photo.json", "keep.jpg"]:
+            self.add_file(name)
+        self.assertEqual(self.gallery.count_all_images(), 2)
+        _, deleted = await self.gallery.delete_item("photo.jpg", [".json"])
+        self.assertTrue(deleted)
+        self.assertFalse((self.root / "photo.jpg").exists())
+        self.assertFalse((self.root / "photo.json").exists())
+        self.assertTrue((self.root / "keep.jpg").exists())
+        trashed = list((self.root / ".mflux-trash").iterdir())
+        self.assertEqual(
+            {p.name.split("-", 1)[1] for p in trashed}, {"photo.jpg", "photo.json"}
+        )
+        # Trashed images are neither counted nor iterated.
+        self.assertEqual(self.gallery.count_all_images(), 1)
+        self.assertEqual(len(list(self.gallery.iter_all_images())), 1)
+
+    async def test_undo_restores_file_and_sidecar(self):
+        self.gallery.delete_mode = "trash"
+        self.add_file("photo.jpg")
+        self.add_file("photo.json")
+        await self.gallery.delete_item("photo.jpg", [".json"])
+        self.assertEqual(self.gallery.count_all_images(), 0)
+        restored = self.gallery.undo_last_delete()
+        self.assertEqual(restored, self.root / "photo.jpg")
+        self.assertTrue((self.root / "photo.jpg").exists())
+        self.assertTrue((self.root / "photo.json").exists())
+        self.assertEqual(self.gallery.count_all_images(), 1)
+
+    async def test_undo_without_deletions_returns_none(self):
+        self.assertIsNone(self.gallery.undo_last_delete())
+
+    async def test_undo_restores_most_recent_deletion_first(self):
+        self.gallery.delete_mode = "trash"
+        self.add_file("first.jpg")
+        self.add_file("second.jpg")
+        await self.gallery.delete_item("first.jpg")
+        await self.gallery.delete_item("second.jpg")
+        restored = self.gallery.undo_last_delete()
+        self.assertEqual(restored, self.root / "second.jpg")
+        restored = self.gallery.undo_last_delete()
+        self.assertEqual(restored, self.root / "first.jpg")
+
+    async def test_permanent_mode_cannot_be_undone(self):
+        self.gallery.delete_mode = "permanent"
+        self.add_file("photo.jpg")
+        await self.gallery.delete_item("photo.jpg")
+        self.assertIsNone(self.gallery.undo_last_delete())

@@ -11,7 +11,7 @@ Design is minimalist and optimized for decision speed, informed by my prior work
 ## Features
 
 - 🖼️ **Image Gallery Browsing**: Display images from any local directory with swiper-based UI
-- 🗑️ **Image Management**: Delete images directly from the UI (one tap or one key press)
+- 🗑️ **Image Management**: Delete images directly from the UI (one tap or one key press), with trash mode and undo
 - ⌨️ **Keyboard Controls**: Navigate and decide with keyboard shortcuts
 - 🔍 **Finder Integration**: Show/reveal images in Finder (macOS servers only)
 
@@ -81,16 +81,26 @@ uv run --no-sync python -m mflux_gallery.main /path/to/images [OPTIONS]
 |--------|-------------|---------|
 | `--host` | Host address to bind server | 0.0.0.0 |
 | `--port` | Port number for the server | 9000 |
-| `--delete-mode` | How to handle deletion ("trash" or "permanent") | permanent |
+| `--delete-mode` | How to handle deletion ("trash" or "permanent") | trash |
 | `--load-limit` | Maximum number of images to display after sorting (0 displays none) | 100 |
 | `--debug` | Enable debug mode (verbose output, live reload) | False |
 | `--resize-max-width` | Maximum width for resizing gallery images | 512 |
+
+## Safe Deletion
+
+By default deletion is a two-stage operation: files are moved into a
+`.mflux-trash/` folder inside the gallery directory (excluded from the
+gallery itself) and can be restored with the **Undo delete** button or the
+`u` key, which returns the image and its `.json` sidecar to their original
+location. Empty `.mflux-trash/` manually to reclaim disk space. Run with
+`--delete-mode permanent` for the old direct, unrecoverable deletion.
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
 | `d` | Delete current image |
+| `u` | Undo the last delete (trash mode only) |
 | `f` | Show in Finder (macOS server only; hidden and inactive on Linux) |
 | `n` | Next image |
 | `p` | Previous image |

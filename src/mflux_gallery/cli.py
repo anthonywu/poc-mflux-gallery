@@ -31,8 +31,11 @@ def create_parser() -> argparse.ArgumentParser:
         "--delete-mode",
         "-d",
         choices=["trash", "permanent"],
-        default="permanent",
-        help="Specify the delete mode for images (default: permanent)",
+        default="trash",
+        help=(
+            "Specify the delete mode for images (default: trash; "
+            "trashed files are kept in .mflux-trash and can be undone)"
+        ),
     )
 
     parser.add_argument(

@@ -209,6 +209,30 @@ class GalleryRegressionTests(unittest.TestCase):
             self.assertFalse((self.root / "new.json").exists())
             self.assertEqual(self.app.state.gallery.count_all_images(), 2)
 
+    def test_undo_delete_route_restores_files_and_counter(self):
+        response = self.client.post(
+            "/image_action",
+            data={"action": "delete", "gallery_path": "new.JPG"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse((self.root / "new.JPG").exists())
+
+        response = self.client.post(
+            "/image_action",
+            data={"action": "undo-delete"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["hx-trigger"], "delete-restored")
+        self.assertIn("photo-counter", response.text)
+        self.assertTrue((self.root / "new.JPG").exists())
+        self.assertTrue((self.root / "new.json").exists())
+        self.assertEqual(self.app.state.gallery.count_all_images(), 3)
+
+        response = self.client.post("/image_action", data={"action": "undo-delete"})
+        self.assertEqual(response.status_code, 409)
+
     def test_action_errors_and_finder_notifications(self):
         for action, path in [("unknown", "new.JPG"), ("delete", "../outside.JPG")]:
             response = self.client.post(
@@ -264,7 +288,7 @@ class GalleryRegressionTests(unittest.TestCase):
                 "directory": self.root,
                 "host": "127.0.0.1",
                 "port": 9000,
-                "delete_mode": "permanent",
+                "delete_mode": "trash",
                 "load_limit": 100,
                 "debug": False,
                 "resize_max_width": 512,

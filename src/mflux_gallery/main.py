@@ -148,6 +148,7 @@ def gallery_page_response(
         current_resize=resize_width,
         mode=mode,
         finder_available=FINDER_AVAILABLE,
+        undo_available=config.delete_mode == "trash",
     )
 
 
@@ -204,14 +205,30 @@ def register_image_routes(
         )
 
 
+def _undo_response(
+    session: dict[str, t.Any], app_gallery: gallery.Gallery
+) -> Response | tuple[FT, ...]:
+    restored = app_gallery.undo_last_delete()
+    if restored is None:
+        return Response("Nothing to undo", status_code=409)
+    log_notif(session, f"Restored {restored.as_posix()!r}", typ="success")
+    return (
+        Sup(app_gallery.count_all_images(), id="photo-counter", hx_swap_oob="true"),
+        HtmxResponseHeaders(trigger="delete-restored"),
+    )
+
+
 def register_action_routes(
     app: FastHTML, config: AppConfig, app_gallery: gallery.Gallery
 ) -> None:
     @app.route("/image_action")
-    async def post(session, action: str, gallery_path: str):
+    async def post(session, action: str, gallery_path: str = ""):
         action = action.strip().lower()
-        if action not in ["delete", "show-in-finder"]:
+        if action not in ["delete", "show-in-finder", "undo-delete"]:
             return Response(f"{action=} not supported", status_code=403)
+
+        if action == "undo-delete":
+            return _undo_response(session, app_gallery)
 
         if action == "show-in-finder" and not FINDER_AVAILABLE:
             return Response("Finder is only available on macOS", status_code=403)
@@ -222,7 +239,11 @@ def register_action_routes(
                     gallery_path, delete_other_suffixes=[".json"]
                 )
                 if success:
-                    notif = f"Deleted {target.as_posix()!r}"
+                    notif = f"Deleted {target.as_posix()!r}" + (
+                        " to trash (undo available)"
+                        if config.delete_mode == "trash"
+                        else " permanently"
+                    )
                     log_notif(session, notif, typ="success")
                 else:
                     notif = f"Does not exist: {target.as_posix()!r}"
@@ -271,7 +292,9 @@ def register_page_routes(
 def create_app(config: AppConfig) -> FastHTML:
     """Build an independent gallery application without changing process state."""
     app_gallery = gallery.Gallery(
-        config.directory, resize_max_width=config.resize_max_width
+        config.directory,
+        resize_max_width=config.resize_max_width,
+        delete_mode=config.delete_mode,
     )
     app, _ = fast_app(
         hdrs=_headers(),

@@ -3,6 +3,7 @@ import base64
 import io
 import subprocess
 import time
+import typing as t
 from collections.abc import Iterator
 from itertools import islice
 from pathlib import Path
@@ -28,6 +29,7 @@ class InvalidPathValueError(ValueError):
 
 class Gallery:
     DEFAULT_PHOTO_SUFFIXES = [".jpg", ".jpeg", ".png", ".heic"]
+    TRASH_DIR_NAME = ".mflux-trash"
 
     def __init__(
         self,
@@ -35,6 +37,7 @@ class Gallery:
         photo_suffixes: list[str] = DEFAULT_PHOTO_SUFFIXES,
         resize_max_width: int = 512,
         load_limit: int = 1000,
+        delete_mode: t.Literal["trash", "permanent"] = "permanent",
     ) -> None:
         if load_limit < 0:
             raise ValueError("load_limit must be non-negative")
@@ -42,6 +45,9 @@ class Gallery:
         self.photo_suffixes = photo_suffixes
         self.resize_max_width = resize_max_width
         self.load_limit = load_limit
+        self.delete_mode = delete_mode
+        self.trash_dir = gallery_dir / self.TRASH_DIR_NAME
+        self._undo_stack: list[list[tuple[Path, Path]]] = []
         self._count_cache: int | None = None
         self._count_cache_time = 0
         self._cache_duration = 60  # Cache for 1 minute
@@ -60,6 +66,7 @@ class Gallery:
             path
             for path in self.gallery_dir.rglob("*")
             if path.suffix.lower() == suffix.lower()
+            and self.trash_dir not in path.parents
         )
 
     def count_all_images(self) -> int:
@@ -123,6 +130,16 @@ class Gallery:
         except ValueError as ve:
             raise InvalidPathValueError(f"cannot jailbreak to {target=}") from ve
 
+    def _trash_path(self, path: Path) -> Path:
+        """Namespaced with a timestamp so repeated deletions never collide."""
+        return self.trash_dir / f"{int(time.time() * 1000)}-{path.name}"
+
+    def _trash(self, target: Path) -> Path:
+        self.trash_dir.mkdir(exist_ok=True)
+        trashed = self._trash_path(target)
+        target.rename(trashed)
+        return trashed
+
     async def delete_item(
         self, gallery_path: str | Path, delete_other_suffixes: list[str] | None = None
     ) -> tuple[Path, bool]:
@@ -130,6 +147,16 @@ class Gallery:
         try:
             if not target.exists():
                 return target, False
+            if self.delete_mode == "trash":
+                moved: list[tuple[Path, Path]] = [(target, self._trash(target))]
+                if delete_other_suffixes:
+                    for suffix in delete_other_suffixes:
+                        sidecar = target.with_suffix(suffix)
+                        if sidecar.exists():
+                            moved.append((sidecar, self._trash(sidecar)))
+                self._undo_stack.append(moved)
+                del self._undo_stack[:-20]  # Keep a bounded undo history.
+                return target, True
             target.unlink()
             if delete_other_suffixes:
                 for suffix in delete_other_suffixes:
@@ -140,6 +167,18 @@ class Gallery:
         finally:
             # Missing files and partial failures can also make the cached count stale.
             self.invalidate_count_cache()
+
+    def undo_last_delete(self) -> Path | None:
+        """Restore the most recently trashed files; returns the image path or None."""
+        while self._undo_stack:
+            moved = self._undo_stack.pop()
+            for original, trashed in moved:
+                if trashed.exists():
+                    original.parent.mkdir(parents=True, exist_ok=True)
+                    trashed.rename(original)
+            self.invalidate_count_cache()
+            return moved[0][0]
+        return None
 
     async def show_in_finder(
         self, gallery_path: str | Path

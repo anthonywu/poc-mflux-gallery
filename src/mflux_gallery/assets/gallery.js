@@ -102,14 +102,30 @@ document.addEventListener("DOMContentLoaded", () => {
 // Swiper owns slide removal. HTMX only applies the out-of-band count update.
 document.addEventListener("delete-successful", function (event) {
   event.target.dataset.deleteSucceeded = "true";
+  const undoForm = document.getElementById("undo-form");
+  if (undoForm) undoForm.hidden = false;
 });
 
+// The undo form restores the most recent deletion server-side; this handler
+// puts the saved slide element back at its original position.
+document.addEventListener("delete-restored", function () {
+  const undoForm = document.getElementById("undo-form");
+  if (undoForm) undoForm.hidden = true;
+  const swiper = document.querySelector("swiper-container")?.swiper;
+  if (!lastDeletedSlide || !swiper) return;
+  const { index, slide } = lastDeletedSlide;
+  lastDeletedSlide = null;
+  swiper.addSlide(Math.min(index, swiper.slides.length), slide);
+});
+
+let lastDeletedSlide = null;
 function removeDeletedSlide(form) {
   const slide = form.closest("swiper-slide");
   const swiper = document.querySelector("swiper-container")?.swiper;
   if (!slide || !swiper) return;
   const index = Array.from(swiper.slides).indexOf(slide);
   if (index < 0) return;
+  lastDeletedSlide = { index, slide };
   swiper.removeSlide(index);
   if (navigator.vibrate) navigator.vibrate(50);
 }
@@ -221,6 +237,10 @@ document.addEventListener("keydown", (event) => {
           `.swiper-slide-active .${key === "d" ? "delete-image" : "show-in-finder"}`,
         )
         ?.click();
+  } else if (key === "u") {
+    const undoForm = document.getElementById("undo-form");
+    if (!event.repeat && undoForm && !undoForm.hidden)
+      undoForm.querySelector('button[type="submit"]').click();
   } else if (key === "m") {
     const metadata = document.querySelector(
       ".swiper-slide-active .metadata-section",

@@ -10,7 +10,7 @@ class AppConfig:
     directory: Path
     host: str = "127.0.0.1"
     port: int = 9000
-    delete_mode: Literal["trash", "permanent"] = "permanent"
+    delete_mode: Literal["trash", "permanent"] = "trash"
     load_limit: int = 100
     debug: bool = False
     resize_max_width: int = 512

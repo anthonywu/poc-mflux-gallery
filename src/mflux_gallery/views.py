@@ -246,7 +246,7 @@ def gallery_navigation(mode: GalleryMode, current_resize: int) -> FT:
     )
 
 
-def browse_controls() -> FT:
+def browse_controls(*, undo_available: bool = False) -> FT:
     return Div(
         Button(
             "←",
@@ -281,6 +281,18 @@ def browse_controls() -> FT:
             title="Next image (n)",
             cls="z-button z-button-default",
         ),
+        Form(hx_post="/image_action", hx_swap="none", hidden=True, id="undo-form")(
+            Button(
+                "Undo delete ",
+                Kbd("u"),
+                type="submit",
+                cls="z-button z-button-ghost",
+                title="Undo the last delete (u)",
+            ),
+            Input(type="hidden", name="action", value="undo-delete"),
+        )
+        if undo_available
+        else None,
         Button(
             "Focus",
             type="button",
@@ -303,7 +315,9 @@ def browse_controls() -> FT:
     )
 
 
-def gallery_controls(*, finder_available: bool = False) -> FT:
+def gallery_controls(
+    *, finder_available: bool = False, undo_available: bool = False
+) -> FT:
     return Footer(
         Details(id="keyboard-controls")(
             Summary(H4("Keyboard Controls ('h' to toggle)")),
@@ -317,6 +331,9 @@ def gallery_controls(*, finder_available: bool = False) -> FT:
                     Li(Kbd("A / Z / S"), Span("Latest / Oldest / Shuffled")),
                     Li(Kbd("e"), Span("Go to last slide")),
                     Li(Kbd("d"), Span("Delete image and advance slide")),
+                    Li(Kbd("u"), Span("Undo the last delete"))
+                    if undo_available
+                    else None,
                     Li(Kbd("f"), Span("Show in Finder")) if finder_available else None,
                     Li(Kbd("m"), Span("Toggle metadata visibility")),
                     Li(Kbd("v"), Span("Focus mode; Escape to exit")),
@@ -335,6 +352,7 @@ def gallery_page(
     current_resize: int,
     mode: GalleryMode = "default",
     finder_available: bool = False,
+    undo_available: bool = False,
 ) -> tuple[FT, FT]:
     return (
         Title(gallery_dir),
@@ -353,7 +371,7 @@ def gallery_page(
                 cls="gallery-heading",
             ),
             gallery_navigation(mode, current_resize),
-            browse_controls(),
+            browse_controls(undo_available=undo_available),
             Swiper_Container(
                 *[
                     Swiper_Slide(elem, lazy=True, id=f"slide-{i}")
@@ -387,7 +405,9 @@ def gallery_page(
                 id="filmstrip",
                 hidden=True,
             ),
-            gallery_controls(finder_available=finder_available),
+            gallery_controls(
+                finder_available=finder_available, undo_available=undo_available
+            ),
             cls="gallery-shell",
         ),
     )
